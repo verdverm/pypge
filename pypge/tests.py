@@ -8,7 +8,7 @@ np.random.seed(23)
 
 from evaluate import Eval, Score
 
-x = symbols('x')
+x, w = symbols('x w')
 
 F_1 = 1.5 * x**2 - x**3
 F_2 = exp(Abs(x)) * sin(x)
@@ -30,6 +30,37 @@ S_1 = Score(F_1_Y_pure,F_1_Y)
 S_2 = Score(F_2_Y_pure,F_2_Y)
 S_3 = Score(F_3_Y_pure,F_3_Y)
 
-print S_1, F_1
-print S_2, F_2
-print S_3, F_3
+# print S_1, F_1
+# print S_2, F_2
+# print S_3, F_3
+
+C = symbols('C')
+F = 1.5 * x**2 - x**3
+
+# xs = symbols('x y z')
+
+# if x in xs:
+# 	print "found x"
+# else:
+# 	print "no x..."
+
+# print dir(C), "\n\n"
+
+import memoize
+memo = memoize.Memoizer([x,w])
+
+import expand
+bases = expand.GenBases("x",2,expand.BASIC_TRIG)
+
+for i,e in enumerate(bases):
+	# if i > 3:
+	# 	break
+
+	iis, ffs = memo.encode(e)
+	# print i,e,iis
+	r1 = memo.lookup_encoded(iis)
+	r2 = memo.insert_encoded(iis)
+	r3 = memo.lookup_encoded(iis)
+	print i, "  ",r1,r2,r3,"\n"
+
+
