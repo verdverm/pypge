@@ -62,9 +62,9 @@ class PGE:
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
 
 
-		self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
+		# self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
 
-		for i,e in enumerate(self.bases):
+		for i,e in enumerate(self.grower.first_exprs()):
 			m = model.Model(e)
 			did_ins = self.memoizer.insert(m)
 			size = m.size()
@@ -128,22 +128,29 @@ class PGE:
 
 			for i,e in enumerate(expanded):
 				
-				# print "  memoize..."
-				m = model.Model(e)
-				did_ins = self.memoizer.insert(m)
-				size = m.size()
-				m.rewrite_coeff()
+				try:
+					
+					# print "  memoize..."
+					m = model.Model(e)
+					did_ins = self.memoizer.insert(m)
+					size = m.size()
+					m.rewrite_coeff()
 
-				# print "    if new:"
-				if did_ins:
-					# print "      train..."
-					evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
-					# print "      score..."
-					y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-					m.score = evaluate.Score(tests.F_1_Y, y_pred)
-					# print "      queue..."
-					self.queue.push(m)
+					# print "    if new:"
+					if did_ins:
+						# print "      train..."
+						evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
+						if not m.fit_result.success:
+							continue
+						# print "      score..."
+						y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
+						m.score = evaluate.Score(tests.F_1_Y, y_pred)
+						# print "      queue..."
+						self.queue.push(m)
 
+				except Exception, e:
+					print e
+					continue
 
 
 

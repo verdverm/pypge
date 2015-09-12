@@ -38,12 +38,32 @@ class Grower:
 			self.var_sub_fs = [ f(x) for f in funcs for x in xs ]
 		self.var_sub_terms = self.var_sub_xs + self.var_sub_fs
 
+		self.add_extnd_terms = self.solo_muls + self.double_muls + self.lin_funcs
+		self.mul_extnd_terms = self.var_sub_terms
+
+	def first_exprs(self):
+
+		mul_exprs = self.double_muls
+		if len(self.xs) < 3:
+			mul_exprs += self.triple_muls
+		func_exprs = self.lin_funcs
+
+		mid_exprs = self.solo_muls + mul_exprs + func_exprs
+		add_exprs = [ Add( tpl[0], tpl[1], evaluate=False ) for tpl in combinations(mid_exprs, 2)]
+		plus_C_exprs = [ Add( expr, C ) for expr in mid_exprs + add_exprs]
+
+		ret_exprs = mid_exprs + add_exprs + plus_C_exprs
+
+		return ret_exprs
+
 
 	def grow(self, model):
 
 		var_expands = self._var_sub(model.orig)
+		add_expands = self._add_extend(model.orig)
+		mul_expands = self._mul_extend(model.orig)
 
-		return var_expands
+		return var_expands + add_expands + mul_expands
 
 
 	def _var_sub(self, expr, limit_sub=False):
@@ -56,7 +76,7 @@ class Grower:
 			for i,e in enumerate(expr.args):
 				# if the current arg is also a non-atom, recurse
 				if not e.is_Atom:
-					lim_sub = not (e.is_Add or e.is_Mul)
+					lim_sub = limit_sub or not (e.is_Add or e.is_Mul)
 					# for each expr returned, we need to clone the current args
 					# and make the substitution, sorta like flattening?
 					ee = self._var_sub(e, lim_sub)
@@ -98,109 +118,79 @@ class Grower:
 		# if e.is_Symbol and e in self.xs:
 		
 
-	def _add_extend(self, model, ii):
-		pass
+	def _add_extend(self, expr):
+		vsubs = []
+		# only worry about non-atoms, cause we extend args
+		if not expr.is_Atom:
+			args_sets = []
+			# however we have 2 cases here (as opposed to _var_sub)
+			# 1. extend this expression if it's an Add
+			if expr.is_Add:
+				for term in self.add_extnd_terms:
+					cloned_args = list(expr.args)
+					cloned_args.append(term)
+					args_sets.append(cloned_args)
 
-	def _mul_extend(self, model, ii):
-		pass
-
-
-
-
-def GenerateInitialModels(xs, max_combo, funcs):
-	if type(xs) is Symbol:
-		xs = [xs]
-
-	solo_exprs = [ C * x for x in xs ]
-	mul_exprs = [ C * tpl[0] * tpl[1] for tpl in combos(xs, 2)]
-	mul_exprs = mul_exprs + [ C * tpl[0] * tpl[1] * tpl[2] for tpl in combos(xs, 3)]
-
-	func_exprs = []
-	if funcs is not None:
-		func_exprs = [ C*f(x) for f in funcs for x in xs]
-
-	mid_exprs = solo_exprs + mul_exprs + func_exprs
-
-	add_exprs = [ Add( tpl[0], tpl[1], evaluate=False ) for tpl in combinations(mid_exprs, 2)]
-
-	plus_C_exprs = [ Add( expr, C ) for expr in mid_exprs + add_exprs]
-
-	ret_exprs = mid_exprs + add_exprs + plus_C_exprs
-	# ret_exprs = [Symbol('C_0')] + mid_exprs + add_exprs + plus_C_exprs
-
-	return ret_exprs
-
-def GrowModels(models):
-
-	x = Symbol('x')
-
-	expr = models[0].expr
-	l_args = list(expr.args)
-	l_args.append(x**2)
-	t_args = tuple(l_args)
-	clone = expr.func(*t_args)
-
-	return [clone]
+			# 2. do the recursion
+			for i,e in enumerate(expr.args):
+				if not e.is_Atom:
+					ee = self._add_extend(e)
+					if len(ee) > 0:
+						# We made a substitution(s) on a variable down this branch!!
+						for vs in ee:
+							# clone current args
+							cloned_args = list(expr.args)
+							# replace this term in each
+							cloned_args[i] = vs
+							# append to the args_sets
+							args_sets.append(cloned_args)
 
 
+			# finally, create all of the clones at the current level of recursion
+			for args in args_sets:
+				args = tuple(args)
+				tmp = expr.func(*args)
+				vsubs.append(tmp)
 
-# def _rewrite_coeff_helper(self, expr, ii):
-# 	ret = expr
-# 	if not expr.is_Atom:
-# 		args = []
-# 		has_C = False
-# 		for i,e in enumerate(expr.args):
-# 			if not e.is_Atom:
-# 				ee, ii = self._rewrite_coeff_helper(e,ii)
-# 				args.append(ee)
-# 				# args = args + ee
-# 			elif e == C:
-# 				args.append(CS[ii])
-# 				# args = args + cs[ii]
-# 				ii += 1
-# 			else:
-# 				args.append(e)
-# 		args = tuple(args)
-# 		ret = expr.func(*args)
-# 	return ret,ii
+		return vsubs
 
+	def _mul_extend(self, expr):
+		vsubs = []
+		# only worry about non-atoms, cause we extend args
+		if not expr.is_Atom:
+			args_sets = []
+			# however we have 2 cases here (as opposed to _var_sub)
+			# 1. extend this expression if it's an Add
+			if expr.is_Mul:
+				for term in self.mul_extnd_terms:
+					cloned_args = list(expr.args)
+					cloned_args.append(term)
+					args_sets.append(cloned_args)
 
-# def gen_basic_trig(xs):
-# 	return [ C*f(x) for f in BASIC_TRIG for x in xs]
-
-# def gen_basic_trig_nonlin(xs):
-# 	return [ C*f(C*x + C) for f in BASIC_TRIG for x in xs]
-
-
-# num_xs = 3
-# xs_str = " ".join(["x_" + str(x) for x in range(num_xs)])
-# xs = symbols(xs_str)
-# # print xs
-
-# ts = gen_basic_trig(xs)
-# ts_nl = gen_basic_trig_nonlin(xs)
-# fxs = ts + ts_nl
-# print fxs
-
-# import sys
-# sys.exit()
-
-# add_exprs = [ C*tpl[0] + C*tpl[1] for tpl in combos(xs, 2)]
-# mul_exprs = [ C * tpl[0] * tpl[1] for tpl in combos(xs, 2)]
+			# 2. do the recursion
+			for i,e in enumerate(expr.args):
+				if not e.is_Atom:
+					ee = self._mul_extend(e)
+					if len(ee) > 0:
+						# We made a substitution(s) on a variable down this branch!!
+						for vs in ee:
+							# clone current args
+							cloned_args = list(expr.args)
+							# replace this term in each
+							cloned_args[i] = vs
+							# append to the args_sets
+							args_sets.append(cloned_args)
 
 
-# print "add bases:"
-# for i, expr in enumerate(add_exprs):
-# 	print i, expr
+			# finally, create all of the clones at the current level of recursion
+			for args in args_sets:
+				args = tuple(args)
+				tmp = expr.func(*args)
+				vsubs.append(tmp)
 
-# print "mul bases:"
-# for i, expr in enumerate(mul_exprs):
-# 	print i, expr
+		return vsubs
 
 
-# these should be rewritten via tree recursion on abstract 'C'
-# num_cs = 3
-# cs_str = " ".join(["c_" + str(c) for c in range(num_cs)])
-# cs = symbols(cs_str)
-# print cs
+
+
 

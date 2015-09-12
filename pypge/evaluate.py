@@ -22,7 +22,11 @@ def Fit(model, xs, X_train, Y_train):
 
 		return y_pred - y_train
 
-	minimize(fcn2min, model.params, args=(X_train,Y_train))
+	result = minimize(fcn2min, model.params, args=(X_train,Y_train))
+	model.fit_result = result
+	if not result.success:
+		print "Error fitting: ", ier, result.message
+
 
 
 def Eval(model, xs, X_input):
