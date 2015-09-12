@@ -82,21 +82,21 @@ class PGE:
 		# self.queue.sort()
 		# self.queue.do_print()
 
-		# print "  pop'n..."
-		popd = self.queue.pop(self.pop_count)
-		print "\npopped:"
-		for p in popd:
-			print p
+		# # print "  pop'n..."
+		# popd = self.queue.pop(self.pop_count)
+		# print "\npopped:"
+		# for p in popd:
+		# 	print p
 
-		# print "  expand..."
-		expanded = []
-		for p in popd:
-			ex = self.grower.grow(p)
-			expanded.extend(ex)
+		# # print "  expand..."
+		# expanded = []
+		# for p in popd:
+		# 	ex = self.grower.grow(p)
+		# 	expanded.extend(ex)
 
-		print "\nexpanded:"
-		for e in expanded:
-			print e
+		# print "\nexpanded:"
+		# for e in expanded:
+		# 	print e
 
 
 		self.prepared = True
@@ -112,11 +112,19 @@ class PGE:
 
 			# print "  pop'n..."
 			popd = self.queue.pop(self.pop_count)
+			print "\npopped:"
 			for p in popd:
 				print p
 
 			# print "  expand..."
-			expanded = expand.GrowExpressions(popd)
+			expanded = []
+			for p in popd:
+				ex = self.grower.grow(p)
+				expanded.extend(ex)
+
+			print "\nexpanded:"
+			for e in expanded:
+				print e
 
 			for i,e in enumerate(expanded):
 				

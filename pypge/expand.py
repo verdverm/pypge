@@ -32,11 +32,11 @@ class Grower:
 			self.nonlin_funcs = [ C*f(C*x+C) for f in funcs for x in xs]
 
 		## these are the same as above, minus the C
-		var_sub_xs = [ tpl[0] * tpl[1] for tpl in combos(xs, 2) ]
-		var_sub_fs = []
+		self.var_sub_xs = [ tpl[0] * tpl[1] for tpl in combos(xs, 2) ]
+		self.var_sub_fs = []
 		if funcs is not None:
-			var_sub_fs = [ f(x) for f in funcs for x in xs ]
-		self.var_sub_terms = var_sub_xs + var_sub_fs
+			self.var_sub_fs = [ f(x) for f in funcs for x in xs ]
+		self.var_sub_terms = self.var_sub_xs + self.var_sub_fs
 
 
 	def grow(self, model):
@@ -46,7 +46,7 @@ class Grower:
 		return var_expands
 
 
-	def _var_sub(self, expr):
+	def _var_sub(self, expr, limit_sub=False):
 		vsubs = []
 		# only worry about non-atoms, cause we have to replace args
 		if not expr.is_Atom:
@@ -56,9 +56,10 @@ class Grower:
 			for i,e in enumerate(expr.args):
 				# if the current arg is also a non-atom, recurse
 				if not e.is_Atom:
+					lim_sub = not (e.is_Add or e.is_Mul)
 					# for each expr returned, we need to clone the current args
 					# and make the substitution, sorta like flattening?
-					ee = self._var_sub(e)
+					ee = self._var_sub(e, lim_sub)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
 						for vs in ee:
@@ -72,7 +73,10 @@ class Grower:
 				elif e in self.xs:
 					## Lets make a variable substitution !!
 					# loop over self.var_sub_terms
-					for vs in self.var_sub_terms:
+					sub_terms = self.var_sub_terms
+					if limit_sub:
+						sub_terms = self.var_sub_xs
+					for vs in sub_terms:
 						# clone current args
 						cloned_args = list(expr.args)
 						# replace this term in each
