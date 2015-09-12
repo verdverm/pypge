@@ -10,4 +10,5 @@ setup(
   download_url = 'https://github.com/verdverm/pypge/tarball/0.1', # I'll explain this in a second
   keywords = ['pge', 'prioritized', 'grammar', 'enumeration', 'symbolic', 'regression', 'genetic programming'], # arbitrary keywords
   classifiers = [],
+  install_requires=['sympy', 'pandas', 'lmfit'],
 )

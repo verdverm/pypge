@@ -8,6 +8,16 @@ PGE stands for Prioritized Grammar Enumeration and is *the* method for solving t
 
 `some bias may be observed here, please forgive the author :]`
 
+### Installation
+
+You can install PyPGE with pip.
+
+`pip install pypge`
+
+### scikit-learn integration
+
+planned, of primary concern
+
 ### Contributing
 
 Branching practices follow the methodology outlined at: http://nvie.com/posts/a-successful-git-branching-model/
