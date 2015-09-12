@@ -61,7 +61,8 @@ class PGE:
 			did_ins = self.memoizer.insert(e)
 			m = model.Model(e)
 			size = m.size()
-			print i,e, size, did_ins
+			m.rewrite_coeff()
+			print i,m.expr, size, m.cs
 
 			# if did_ins:
 			# 	print "  train..."

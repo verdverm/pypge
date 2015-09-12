@@ -1,8 +1,13 @@
 import sympy
+C = sympy.Symbol('C')
+
+
+
 
 class Model:
 
 	def __init__(self, expr, xs=None, cs=None):
+		self.orig = expr
 		self.expr = expr
 
 		self.xs = None
@@ -30,7 +35,47 @@ class Model:
 
 
 	def rewrite_coeff(self):
-		pass
+		expr, ii = rewrite_coeff_helper(self.orig, 0)
+		self.expr = expr
+		self.cs = cs[:ii]
+
+cs = [sympy.Symbol("C_"+str(i)) for i in range(8)]
+
+def rewrite_coeff_helper(expr, ii):
+	ret = expr
+	if not expr.is_Atom:
+		args = []
+		has_C = False
+		for i,e in enumerate(expr.args):
+			if not e.is_Atom:
+				ee, ii = rewrite_coeff_helper(e,ii)
+				args.append(ee)
+				# args = args + ee
+			elif e == C:
+				args.append(cs[ii])
+				# args = args + cs[ii]
+				ii += 1
+			else:
+				args.append(e)
+		args = tuple(args)
+		ret = expr.func(*args)
+	return ret,ii
 
 
 
+# x,y,z = sympy.symbols("x y z")
+
+# print cs
+
+# f = C*x+C*y+C*z
+# F, ii = rewrite_coeff_helper(f,0)
+# G, ii = rewrite_coeff_helper(f,3)
+# args = (x,y,z)
+# F = f.func(*args)
+# print F
+
+# g = f.subs(cs)
+# print f
+# print F
+# print G
+# print g
