@@ -11,7 +11,7 @@ def main():
 		system_type = "explicit",
 		search_vars = "y",
 		usable_vars = "x",
-		usable_funcs = expand.BASIC_BASE,
+		# usable_funcs = expand.BASIC_BASE,
 		max_iter = 10
 		)
 

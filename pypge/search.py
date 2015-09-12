@@ -1,9 +1,13 @@
 import sympy
 
+import tests
+
+import model
 import expand
 import memoize
-import model
+import evaluate
 
+import lmfit
 
 class PGE:
 	
@@ -58,13 +62,19 @@ class PGE:
 
 
 		for i,e in enumerate(self.bases):
-			did_ins = self.memoizer.insert(e)
 			m = model.Model(e)
+			did_ins = self.memoizer.insert(m)
 			size = m.size()
 			m.rewrite_coeff()
-			print i,m.expr, size, m.cs
+			print i,m.expr, size, m.id
 
-			# if did_ins:
+			if did_ins:
+				evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
+				y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
+				score = evaluate.Score(tests.F_1_Y, y_pred)
+				print "  ", [ m.params[str(c)].value for c in m.cs ]
+				print "  ", score
+				# lmfit.report_fit(m.params)
 			# 	print "  train..."
 			# 	print "  score..."
 			# 	print "  queue..."

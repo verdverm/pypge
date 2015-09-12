@@ -5,17 +5,24 @@ init_printing(use_unicode=True)
 class Memoizer:
 
 	def __init__(self, variables):
+		self.models = []
 		self.mapper = Mapper(variables)
 		self.memory = Node()
 
-	def insert(self,expr, value=None):
+	def insert(self,model):
+		expr = model.orig
 		iis, ffs = self.encode(expr)
-		return self.memory.insert(iis,value)
+		return self.insert_encoded(iis,model)
 
-	def insert_encoded(self,iis, value=None):
-		return self.memory.insert(iis, value)
+	def insert_encoded(self,iis, model):
+		did_ins = self.memory.insert(iis, model)
+		if did_ins:
+			model.id = len(self.models)
+			self.models.append(model)
+		return did_ins
 
-	def lookup(self,expr):
+	def lookup(self,model):
+		expr = model.orig
 		iis, ffs = self.encode(expr)
 		return self.memory.lookup(iis)
 

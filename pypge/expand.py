@@ -22,6 +22,7 @@ def GenBases(xs, max_combo, funcs):
 
 	solo_exprs = [ C * x for x in xs ]
 	mul_exprs = [ C * tpl[0] * tpl[1] for tpl in combos(xs, 2)]
+	mul_exprs = mul_exprs + [ C * tpl[0] * tpl[1] * tpl[2] for tpl in combos(xs, 3)]
 
 	func_exprs = []
 	if funcs is not None:
@@ -33,17 +34,18 @@ def GenBases(xs, max_combo, funcs):
 
 	plus_C_exprs = [ Add( expr, C ) for expr in mid_exprs + add_exprs]
 
-	ret_exprs = [C] + mid_exprs + add_exprs + plus_C_exprs
+	ret_exprs = mid_exprs + add_exprs + plus_C_exprs
+	# ret_exprs = [Symbol('C_0')] + mid_exprs + add_exprs + plus_C_exprs
 
 	return ret_exprs
 
 
 
-def gen_basic_trig(xs):
-	return [ C*f(x) for f in BASIC_TRIG for x in xs]
+# def gen_basic_trig(xs):
+# 	return [ C*f(x) for f in BASIC_TRIG for x in xs]
 
-def gen_basic_trig_nonlin(xs):
-	return [ C*f(C*x + C) for f in BASIC_TRIG for x in xs]
+# def gen_basic_trig_nonlin(xs):
+# 	return [ C*f(C*x + C) for f in BASIC_TRIG for x in xs]
 
 
 # num_xs = 3

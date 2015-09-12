@@ -1,19 +1,33 @@
 import sympy
 C = sympy.Symbol('C')
+CS = [sympy.Symbol("C_"+str(i)) for i in range(8)]
 
-
+from lmfit import Parameters
 
 
 class Model:
 
 	def __init__(self, expr, xs=None, cs=None):
+		self.id = -1
+		self.parent_id = -1
+
 		self.orig = expr
 		self.expr = expr
 
 		self.xs = None
 		self.cs = None
+		self.params = None
 
 		self.sz = 0
+
+		self.rewrite_coeff()
+
+		params = Parameters()
+		for i,c in enumerate(self.cs):
+			params.add('C_'+str(i), value=1.0)
+
+		self.params = params
+
 
 
 	def get_coeff(self):
@@ -35,31 +49,30 @@ class Model:
 
 
 	def rewrite_coeff(self):
-		expr, ii = rewrite_coeff_helper(self.orig, 0)
+		expr, ii = self._rewrite_coeff_helper(self.orig, 0)
 		self.expr = expr
-		self.cs = cs[:ii]
+		self.cs = CS[:ii]
 
-cs = [sympy.Symbol("C_"+str(i)) for i in range(8)]
 
-def rewrite_coeff_helper(expr, ii):
-	ret = expr
-	if not expr.is_Atom:
-		args = []
-		has_C = False
-		for i,e in enumerate(expr.args):
-			if not e.is_Atom:
-				ee, ii = rewrite_coeff_helper(e,ii)
-				args.append(ee)
-				# args = args + ee
-			elif e == C:
-				args.append(cs[ii])
-				# args = args + cs[ii]
-				ii += 1
-			else:
-				args.append(e)
-		args = tuple(args)
-		ret = expr.func(*args)
-	return ret,ii
+	def _rewrite_coeff_helper(self, expr, ii):
+		ret = expr
+		if not expr.is_Atom:
+			args = []
+			has_C = False
+			for i,e in enumerate(expr.args):
+				if not e.is_Atom:
+					ee, ii = self._rewrite_coeff_helper(e,ii)
+					args.append(ee)
+					# args = args + ee
+				elif e == C:
+					args.append(CS[ii])
+					# args = args + cs[ii]
+					ii += 1
+				else:
+					args.append(e)
+			args = tuple(args)
+			ret = expr.func(*args)
+		return ret,ii
 
 
 
