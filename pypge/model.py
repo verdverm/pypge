@@ -28,6 +28,8 @@ class Model:
 
 		self.params = params
 
+	def __str__(self):
+		return str(self.size()) + "  " + str(self.score) + "  " + str(self.expr)
 
 
 	def get_coeff(self):

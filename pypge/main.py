@@ -15,7 +15,7 @@ def main():
 		max_iter = 10
 		)
 
-	pge_1_var.loop()
+	# pge_1_var.loop()
 
 	print ""
 

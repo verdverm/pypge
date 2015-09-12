@@ -6,6 +6,7 @@ import model
 import expand
 import memoize
 import evaluate
+import select
 
 import lmfit
 
@@ -31,11 +32,16 @@ class PGE:
 
 		# override with kwargs
 		for key, value in kwargs.items():
-			print key, value
+			# print key, value
 			setattr(self, key, value)
 
-		self.prepared = False
 
+		self.vars = sympy.symbols(self.usable_vars)
+		if type(self.vars) is sympy.Symbol:
+			self.vars = [self.vars]
+
+
+		self.prepared = False
 		self.prepare()
 
 
@@ -51,33 +57,41 @@ class PGE:
 			print "ERROR: config missing values"
 			return
 
-		self.vars = sympy.symbols(self.usable_vars)
-		if type(self.vars) is sympy.Symbol:
-			self.vars = [self.vars]
-
-
 		self.memoizer = memoize.Memoizer(self.vars)
+		self.queue = select.ModelQueue(self.max_size)
 
-		self.bases = expand.GenBases(self.vars, 2, self.usable_funcs)
 
+		self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
 
 		for i,e in enumerate(self.bases):
 			m = model.Model(e)
 			did_ins = self.memoizer.insert(m)
 			size = m.size()
 			m.rewrite_coeff()
-			print i,m.expr, size, m.id
+			# print i,m.expr, size, m.id
 
 			if did_ins:
 				evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
 				y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-				score = evaluate.Score(tests.F_1_Y, y_pred)
-				print "  ", [ m.params[str(c)].value for c in m.cs ]
-				print "  ", score
-				# lmfit.report_fit(m.params)
-			# 	print "  train..."
-			# 	print "  score..."
-			# 	print "  queue..."
+				m.score = evaluate.Score(tests.F_1_Y, y_pred)
+				# print "  ", [ m.params[str(c)].value for c in m.cs ]
+				# print "  ", m.score
+				self.queue.push(m)
+
+		# self.queue.do_print()
+
+		# print "  pop'n..."
+		popd = self.queue.pop(self.pop_count)
+		print "\npopped:"
+		for p in popd:
+			print p
+
+		# print "  expand..."
+		expanded = expand.GrowModels(popd)
+		print "\nexpanded:"
+		for e in expanded:
+			print e
+
 
 		self.prepared = True
 
@@ -89,13 +103,33 @@ class PGE:
 
 		for I in range(self.max_iter):
 			print "iter: ", I
+
 			# print "  pop'n..."
+			popd = self.queue.pop(self.pop_count)
+			for p in popd:
+				print p
+
 			# print "  expand..."
-			# print "  memoize..."
-			# print "    if new:"
-			# print "      train..."
-			# print "      score..."
-			# print "      queue..."
+			expanded = expand.GrowExpressions(popd)
+
+			for i,e in enumerate(expanded):
+				
+				# print "  memoize..."
+				m = model.Model(e)
+				did_ins = self.memoizer.insert(m)
+				size = m.size()
+				m.rewrite_coeff()
+
+				# print "    if new:"
+				if did_ins:
+					# print "      train..."
+					evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
+					# print "      score..."
+					y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
+					m.score = evaluate.Score(tests.F_1_Y, y_pred)
+					# print "      queue..."
+					self.queue.push(m)
+
 
 
 
