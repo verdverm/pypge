@@ -31,13 +31,74 @@ class Grower:
 			self.lin_funcs = [ C*f(x) for f in funcs for x in xs]
 			self.nonlin_funcs = [ C*f(C*x+C) for f in funcs for x in xs]
 
+		## these are the same as above, minus the C
+		var_sub_xs = [ tpl[0] * tpl[1] for tpl in combos(xs, 2) ]
+		var_sub_fs = []
+		if funcs is not None:
+			var_sub_fs = [ f(x) for f in funcs for x in xs ]
+		self.var_sub_terms = var_sub_xs + var_sub_fs
 
 
+	def grow(self, model):
+
+		var_expands = self._var_sub(model.orig)
+
+		return var_expands
 
 
+	def _var_sub(self, expr):
+		vsubs = []
+		# only worry about non-atoms, cause we have to replace args
+		if not expr.is_Atom:
+			# make a list of args to this non-atom
+			# each member of the list is the original expr's args with one substitution made
+			args_sets = []
+			for i,e in enumerate(expr.args):
+				# if the current arg is also a non-atom, recurse
+				if not e.is_Atom:
+					# for each expr returned, we need to clone the current args
+					# and make the substitution, sorta like flattening?
+					ee = self._var_sub(e)
+					if len(ee) > 0:
+						# We made a substitution(s) on a variable down this branch!!
+						for vs in ee:
+							# clone current args
+							cloned_args = list(expr.args)
+							# replace this term in each
+							cloned_args[i] = vs
+							# append to the args_sets
+							args_sets.append(cloned_args)
 
+				elif e in self.xs:
+					## Lets make a variable substitution !!
+					# loop over self.var_sub_terms
+					for vs in self.var_sub_terms:
+						# clone current args
+						cloned_args = list(expr.args)
+						# replace this term in each
+						cloned_args[i] = vs
+						# append to the args_sets
+						args_sets.append(cloned_args)
+				else:
+					# we don't have to do anything, probably?
+					pass
 
+			# finally, create all of the clones at the current level of recursion
+			for args in args_sets:
+				args = tuple(args)
+				tmp = expr.func(*args)
+				vsubs.append(tmp)
 
+		return vsubs
+
+		# if e.is_Symbol and e in self.xs:
+		
+
+	def _add_extend(self, model, ii):
+		pass
+
+	def _mul_extend(self, model, ii):
+		pass
 
 
 
@@ -67,8 +128,13 @@ def GenerateInitialModels(xs, max_combo, funcs):
 
 def GrowModels(models):
 
+	x = Symbol('x')
+
 	expr = models[0].expr
-	clone = expr.func(*expr.args).subs(Symbol('x'), Symbol('z'))
+	l_args = list(expr.args)
+	l_args.append(x**2)
+	t_args = tuple(l_args)
+	clone = expr.func(*t_args)
 
 	return [clone]
 

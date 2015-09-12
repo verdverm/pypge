@@ -20,7 +20,9 @@ class ModelQueue:
 		while len(pops) < cnt:
 			last = None
 
-			for i,bin in enumerate(self.bins):
+			for i,bin in enumerate( self.bins ):
+			# for i,bin in enumerate( reversed(self.bins) ):
+			# 	i = 63-i
 
 				# early break
 				if len(pops) == cnt:
@@ -43,24 +45,28 @@ class ModelQueue:
 				diff = curr.score - last.score
 				diff_sz = curr.size() - last.size()
 
-				# print i, diff_sz, diff
+				# print i, diff
 				# print "  ", last
 				# print "  ", curr
 
-				if diff_sz < 1:
+				if diff_sz < 0:
 					print "ERROR: size diff should always positive"
 					return
 
-				if diff < 0:
-					last = curr
-					continue
+				# XXX seems to be an error here
+				# should see both 0.002... expressions
+				# when solving F_1 test
 
-				if diff >= 0:
+				# if diff < 0:
+					# last = curr
+					# continue
+
+				if diff < 0:
 					popd = self.bins[last.size()].pop()
 					self.dirty[last.size()] = True
 					pops.append(popd)
 
-					# print "  ++ ", popd
+					# print " ++++ ", popd
 
 					if len(pops) + 1 == cnt:
 						popd = self.bins[curr.size()].pop()
@@ -75,20 +81,26 @@ class ModelQueue:
 				self.dirty[last.size()] = True
 				pops.append(popd)
 
+	def sort(self):
+		for i,bin in enumerate(self.bins):
+			self.bins[i].sort(key=lambda m: m.score, reverse=True)
+			self.dirty[i] = False
+
 
 	def _sort(self):
-		for i,dirty in self.dirty:
-			if dirty:
+		for i,dty in self.dirty:
+			if dty:
 				self.bins[i].sort(key=lambda m: m.score, reverse=True)
 				self.dirty[i] = False
 
 
 
 	def do_print(self):
-		for i,bin in enumerate(self.bins[3:15]):
-			print i, len(bin), self.dirty[i]
+		offset = 3
+		for i,bin in enumerate(self.bins[offset:15]):
+			print i+offset, len(bin), self.dirty[i]
 			for j,m in enumerate(bin):
-				print "  ", j, m.score
+				print "   ", j, m.score, m.expr
 			print ""
 
 

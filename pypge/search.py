@@ -59,6 +59,7 @@ class PGE:
 
 		self.memoizer = memoize.Memoizer(self.vars)
 		self.queue = select.ModelQueue(self.max_size)
+		self.grower = expand.Grower(self.vars, self.usable_funcs)
 
 
 		self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
@@ -78,6 +79,7 @@ class PGE:
 				# print "  ", m.score
 				self.queue.push(m)
 
+		# self.queue.sort()
 		# self.queue.do_print()
 
 		# print "  pop'n..."
@@ -87,7 +89,11 @@ class PGE:
 			print p
 
 		# print "  expand..."
-		expanded = expand.GrowModels(popd)
+		expanded = []
+		for p in popd:
+			ex = self.grower.grow(p)
+			expanded.extend(ex)
+
 		print "\nexpanded:"
 		for e in expanded:
 			print e

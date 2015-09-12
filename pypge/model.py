@@ -60,7 +60,6 @@ class Model:
 		ret = expr
 		if not expr.is_Atom:
 			args = []
-			has_C = False
 			for i,e in enumerate(expr.args):
 				if not e.is_Atom:
 					ee, ii = self._rewrite_coeff_helper(e,ii)
