@@ -5,17 +5,16 @@ init_printing(use_unicode=True)
 
 from itertools import combinations, combinations_with_replacement as combos
 
-
+BASIC_BASE = (exp, cos, sin)
 BASIC_MISC = (Abs, sqrt, log, exp)
 BASIC_TRIG = (cos, sin, tan)
 HYPER_TRIG = (cosh, sinh, tanh)
 
 
-def GenBases(xs_str, max_combo, funcs):
+def GenBases(xs, max_combo, funcs):
 	# xs_str = " ".join(["x_" + str(x) for x in range(num_xs)])
 
 	C = symbols('C')
-	xs = symbols(xs_str)
 
 	# if only one variable, turn into list
 	if type(xs) is Symbol:

@@ -34,8 +34,8 @@ S_3 = Score(F_3_Y_pure,F_3_Y)
 # print S_2, F_2
 # print S_3, F_3
 
-C = symbols('C')
-F = 1.5 * x**2 - x**3
+# C = symbols('C')
+# F = 1.5 * x**2 - x**3
 
 # xs = symbols('x y z')
 
@@ -46,21 +46,21 @@ F = 1.5 * x**2 - x**3
 
 # print dir(C), "\n\n"
 
-import memoize
-memo = memoize.Memoizer([x,w])
+# import memoize
+# memo = memoize.Memoizer([x,w])
 
-import expand
-bases = expand.GenBases("x",2,expand.BASIC_TRIG)
+# import expand
+# bases = expand.GenBases("x",2,expand.BASIC_TRIG)
 
-for i,e in enumerate(bases):
-	# if i > 3:
-	# 	break
+# for i,e in enumerate(bases):
+# 	# if i > 3:
+# 	# 	break
 
-	iis, ffs = memo.encode(e)
-	# print i,e,iis
-	r1 = memo.lookup_encoded(iis)
-	r2 = memo.insert_encoded(iis)
-	r3 = memo.lookup_encoded(iis)
-	print i, "  ",r1,r2,r3,"\n"
+# 	iis, ffs = memo.encode(e)
+# 	# print i,e,iis
+# 	r1 = memo.lookup_encoded(iis)
+# 	r2 = memo.insert_encoded(iis)
+# 	r3 = memo.lookup_encoded(iis)
+# 	print i, "  ",r1,r2,r3,"\n"
 
 
