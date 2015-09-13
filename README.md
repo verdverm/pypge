@@ -7,11 +7,29 @@ PGE stands for Prioritized Grammar Enumeration and is *the* method for solving t
 
 `This package is under heavy development until this comment is removed`
 
+[![Build Status](https://travis-ci.org/verdverm/pypge.svg)](https://travis-ci.org/verdverm/pypge)
+
 ### Installation
 
 You can install PyPGE with pip.
 
 `pip install pypge`
+
+#### Dependencies
+
+PyPGE depends on several libraries, both Python and other.
+
+Non-Python:
+
+`apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran`
+
+Python:
+
+`pip install -r requirements.txt`
+
+Alternatively you can use conda to install the Python dependencies:
+
+`conda install --yes atlas numpy scipy pytest pandas scikit-learn sympy`
 
 ### scikit-learn integration
 
