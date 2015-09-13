@@ -26,8 +26,9 @@ before_install:
 
 # command to install dependencies
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib pytest dateutil pandas scikit-learn sympy lmfit
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib pytest dateutil pandas scikit-learn sympy
   # - pip install -r requirements.txt
+  - pip install lmfit
   - python setup.py install
 
 # command to run tests
