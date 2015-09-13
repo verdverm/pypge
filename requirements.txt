@@ -1,0 +1,7 @@
+pytest
+scipy
+numpy
+pandas
+scikit-learn
+sympy
+lmfit

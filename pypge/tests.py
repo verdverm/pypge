@@ -30,7 +30,7 @@ S_1 = mean_squared_error(F_1_Y_pure,F_1_Y)
 S_2 = mean_squared_error(F_2_Y_pure,F_2_Y)
 S_3 = mean_squared_error(F_3_Y_pure,F_3_Y)
 
-# print S_1, F_1
-# print S_2, F_2
-# print S_3, F_3
+print S_1, F_1
+print S_2, F_2
+print S_3, F_3
 
