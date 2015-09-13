@@ -10,6 +10,10 @@ branches:
     - develop
     - /^release-.*$/
 
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq libblas-dev liblapack-dev libatlas-base-dev gfortran
+
 # command to install dependencies
 install:
   - pip install -r requirements.txt
@@ -17,3 +21,4 @@ install:
 
 # command to run tests
 script: py.test test/
+
