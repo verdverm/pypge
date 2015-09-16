@@ -13,6 +13,7 @@ class Model:
 		self.iter_id = -1
 
 		self.state = "new"
+		self.error = None
 
 		self.orig = expr
 		self.expr = None

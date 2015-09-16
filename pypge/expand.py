@@ -28,6 +28,7 @@ class Grower:
 		self.xs = xs
 		self.funcs = funcs
 
+		self.solo_xs = [ x**p for p in [-2,-1,1,2] for x in xs]
 		self.solo_muls = [ C * x for x in xs ]
 		self.double_muls = [ C * tpl[0] * tpl[1] for tpl in combos(xs, 2)]
 		self.triple_muls = [ C * tpl[0] * tpl[1] * tpl[2] for tpl in combos(xs, 3)]
@@ -48,7 +49,7 @@ class Grower:
 
 		self.var_sub_terms   = self.var_sub_xs + self.var_sub_fs
 		self.add_extnd_terms = self.solo_muls + self.double_muls + self.lin_funcs
-		self.mul_extnd_terms = self.xs + self.noc_funcs
+		self.mul_extnd_terms = self.solo_xs + self.noc_funcs
 
 
 	def first_exprs(self):
@@ -77,16 +78,16 @@ class Grower:
 		add_expands = algebra.remove_expr_with_ints(add_expands)
 		mul_expands = algebra.remove_expr_with_ints(mul_expands)
 
-		print "\nGrowing  ", model.orig
-		print "  vars:"
-		for e in var_expands:
-			print "    ", algebra.has_ints(e), e
-		print "  adds:"
-		for e in add_expands:
-			print "    ", algebra.has_ints(e), e
-		print "  muls:"
-		for e in mul_expands:
-			print "    ", algebra.has_ints(e), e
+		# print "\nGrowing  ", model.orig
+		# print "  vars:"
+		# for e in var_expands:
+		# 	print "    ", algebra.has_ints(e), e
+		# print "  adds:"
+		# for e in add_expands:
+		# 	print "    ", algebra.has_ints(e), e
+		# print "  muls:"
+		# for e in mul_expands:
+		# 	print "    ", algebra.has_ints(e), e
 
 		return var_expands + add_expands + mul_expands
 

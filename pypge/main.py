@@ -12,7 +12,7 @@ def main():
 		search_vars = "y",
 		usable_vars = "x",
 		usable_funcs = expand.BASIC_BASE,
-		max_iter = 5
+		max_iter = 25
 		)
 
 	pge_1_var.loop()

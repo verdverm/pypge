@@ -22,11 +22,18 @@ def Fit(model, xs, X_train, Y_train):
 
 		return y_pred - y_train
 
-	result = minimize(fcn2min, model.params, args=(X_train,Y_train))
-	model.fit_result = result
-	if not result.success:
-		print "Error fitting: ", ier, result.message
+	result = None
+	try:
+		result = minimize(fcn2min, model.params, args=(X_train,Y_train))
+	except Exception, e:
+		model.error = "error"
 
+	model.fit_result = result
+
+	if model.error == "error":
+		model.error = "numeric error during fitting"
+	elif not result.success:
+		model.error = "Error fitting: " + str(result.ier) + "  " + result.message
 
 
 def Eval(model, xs, X_input):

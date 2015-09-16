@@ -101,15 +101,14 @@ class PGE:
 			for p in popd:
 				ex = self.grower.grow(p)
 				expanded.extend(ex)
+				p.state = "expanded"
 
 			# print "\nexpanded:"
 			# for e in expanded:
 			# 	print e
 
 			for i,e in enumerate(expanded):
-				
-				try:
-					
+
 					# print "  memoize..."
 					m = model.Model(e)
 					did_ins = self.memoizer.insert(m)
@@ -120,17 +119,17 @@ class PGE:
 					if did_ins:
 						# print "      train..."
 						evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
-						if not m.fit_result.success:
+						if m.error or not m.fit_result.success:
+							m.state = "errored"
 							continue
+						m.state = "fitted"
 						# print "      score..."
 						y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
 						m.score = evaluate.Score(tests.F_1_Y, y_pred)
+						m.state = "scored"
 						# print "      queue..."
 						self.queue.push(m)
-
-				except Exception, e:
-					print e
-					continue
+						m.state = "queued"
 
 
 
