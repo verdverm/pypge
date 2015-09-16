@@ -5,12 +5,17 @@ init_printing(use_unicode=True)
 
 from itertools import combinations, combinations_with_replacement as combos
 
+import algebra
+
 BASIC_BASE = (exp, cos, sin)
 BASIC_MISC = (Abs, sqrt, log, exp)
 BASIC_TRIG = (cos, sin, tan)
 HYPER_TRIG = (cosh, sinh, tanh)
 
 C = symbols('C')
+
+
+## Needs some negative powers
 
 class Grower:
 
@@ -21,13 +26,18 @@ class Grower:
 			xs = [xs]
 	
 		self.xs = xs
+		self.funcs = funcs
+
+		self.solo_xs = [ x**p for p in [-2,-1,1,2] for x in xs]
 		self.solo_muls = [ C * x for x in xs ]
 		self.double_muls = [ C * tpl[0] * tpl[1] for tpl in combos(xs, 2)]
 		self.triple_muls = [ C * tpl[0] * tpl[1] * tpl[2] for tpl in combos(xs, 3)]
 		
+		self.noc_funcs = []
 		self.lin_funcs = []
 		self.nonlin_funcs = []
 		if funcs is not None:
+			self.noc_funcs = [ f(x) for f in funcs for x in xs]
 			self.lin_funcs = [ C*f(x) for f in funcs for x in xs]
 			self.nonlin_funcs = [ C*f(C*x+C) for f in funcs for x in xs]
 
@@ -36,10 +46,11 @@ class Grower:
 		self.var_sub_fs = []
 		if funcs is not None:
 			self.var_sub_fs = [ f(x) for f in funcs for x in xs ]
-		self.var_sub_terms = self.var_sub_xs + self.var_sub_fs
 
+		self.var_sub_terms   = self.var_sub_xs + self.var_sub_fs
 		self.add_extnd_terms = self.solo_muls + self.double_muls + self.lin_funcs
-		self.mul_extnd_terms = self.var_sub_terms
+		self.mul_extnd_terms = self.solo_xs + self.noc_funcs
+
 
 	def first_exprs(self):
 
@@ -62,6 +73,28 @@ class Grower:
 		var_expands = self._var_sub(model.orig)
 		add_expands = self._add_extend(model.orig)
 		mul_expands = self._mul_extend(model.orig)
+
+		var_expands = algebra.filter_expr_list(var_expands, algebra.default_filters)
+		add_expands = algebra.filter_expr_list(add_expands, algebra.default_filters)
+		mul_expands = algebra.filter_expr_list(mul_expands, algebra.default_filters)
+
+		# add_expands = algebra.remove_expr_with_ints(add_expands)
+		# mul_expands = algebra.remove_expr_with_ints(mul_expands)
+
+		# var_expands = algebra.filter_expr_with_huge_pow_exponent(var_expands)
+		# add_expands = algebra.filter_expr_with_huge_pow_exponent(add_expands)
+		# mul_expands = algebra.filter_expr_with_huge_pow_exponent(mul_expands)
+
+		# print "\nGrowing  ", model.orig
+		# print "  vars:"
+		# for e in var_expands:
+		# 	print "    ", algebra.has_ints(e), e
+		# print "  adds:"
+		# for e in add_expands:
+		# 	print "    ", algebra.has_ints(e), e
+		# print "  muls:"
+		# for e in mul_expands:
+		# 	print "    ", algebra.has_ints(e), e
 
 		return var_expands + add_expands + mul_expands
 
@@ -127,6 +160,15 @@ class Grower:
 			# 1. extend this expression if it's an Add
 			if expr.is_Add:
 				for term in self.add_extnd_terms:
+					# has_match skips extending an add with a term that is already present 
+					has_match = False
+					for e in expr.args:
+						if e == term:
+							has_match = True
+							break
+					if has_match:
+						continue
+					
 					cloned_args = list(expr.args)
 					cloned_args.append(term)
 					args_sets.append(cloned_args)

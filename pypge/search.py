@@ -61,6 +61,7 @@ class PGE:
 		self.queue = select.ModelQueue(self.max_size)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
 
+		self.final = select.ModelQueue(self.max_size)
 
 		# self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
 
@@ -73,30 +74,20 @@ class PGE:
 
 			if did_ins:
 				evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
+				if m.error or not m.fit_result.success:
+					m.state = "errored"
+					continue
+				m.state = "fitted"
 				y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-				m.score = evaluate.Score(tests.F_1_Y, y_pred)
-				# print "  ", [ m.params[str(c)].value for c in m.cs ]
-				# print "  ", m.score
+				m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
+				if err is not None:
+					m.error = "errored while scoring"
+					m.state = "errored"
+					continue
+				m.state = "scored"	
+
 				self.queue.push(m)
-
-		# self.queue.sort()
-		# self.queue.do_print()
-
-		# # print "  pop'n..."
-		# popd = self.queue.pop(self.pop_count)
-		# print "\npopped:"
-		# for p in popd:
-		# 	print p
-
-		# # print "  expand..."
-		# expanded = []
-		# for p in popd:
-		# 	ex = self.grower.grow(p)
-		# 	expanded.extend(ex)
-
-		# print "\nexpanded:"
-		# for e in expanded:
-		# 	print e
+				m.state = "queued"
 
 
 		self.prepared = True
@@ -108,7 +99,7 @@ class PGE:
 			return 
 
 		for I in range(self.max_iter):
-			print "iter: ", I
+			print "ITER: ", I
 
 			# print "  pop'n..."
 			popd = self.queue.pop(self.pop_count)
@@ -119,17 +110,19 @@ class PGE:
 			# print "  expand..."
 			expanded = []
 			for p in popd:
+				p.state = "popped"
 				ex = self.grower.grow(p)
 				expanded.extend(ex)
+				p.state = "expanded"
+				self.final.push(p)
+				p.state = "finalized"
 
-			print "\nexpanded:"
-			for e in expanded:
-				print e
+			# print "\nexpanded:"
+			# for e in expanded:
+			# 	print e
 
 			for i,e in enumerate(expanded):
-				
-				try:
-					
+
 					# print "  memoize..."
 					m = model.Model(e)
 					did_ins = self.memoizer.insert(m)
@@ -140,17 +133,21 @@ class PGE:
 					if did_ins:
 						# print "      train..."
 						evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
-						if not m.fit_result.success:
+						if m.error or not m.fit_result.success:
+							m.state = "errored"
 							continue
+						m.state = "fitted"
 						# print "      score..."
 						y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-						m.score = evaluate.Score(tests.F_1_Y, y_pred)
+						m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
+						if err is not None:
+							m.error = "errored while scoring"
+							m.state = "errored"
+							continue
+						m.state = "scored"
 						# print "      queue..."
 						self.queue.push(m)
-
-				except Exception, e:
-					print e
-					continue
+						m.state = "queued"
 
 
 

@@ -1,0 +1,42 @@
+language: python
+python:
+  - "2.7"
+  # - "3.4"
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+    - develop
+    - /^release-.*$/
+
+addons:
+  apt:
+    packages:
+      - libblas-dev 
+      - liblapack-dev 
+      - libatlas-base-dev 
+      - gfortran
+
+before_install:
+  # Setup anaconda
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
+  # - sudo rm -rf /dev/shm
+  # - sudo ln -s /run/shm /dev/shm
+
+# command to install dependencies
+install:
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib pytest dateutil pandas scikit-learn sympy
+  - pip install lmfit
+  - python setup.py install
+
+# command to run tests
+script: py.test test/
+
