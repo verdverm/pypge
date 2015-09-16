@@ -12,12 +12,27 @@ print "x int ? ", x.is_Integer
 
 
 
+def has_ints(expr):
+	for e in preorder_traversal(expr):
+		if e.is_Mul:
+			cs, _ = e.as_coeff_Mul()
+			# print "   ** ", cs, cs == numbers.One, type(cs)
+			if type(cs) != numbers.One:
+				return True
+		if e.is_Add:
+			cs, _ = e.as_coeff_Add()
+			# print "   ++ ", cs, cs == numbers.Zero, type(cs)
+			if type(cs) != numbers.Zero:
+				return True
+	return False
 
 
-
-
-
-
+def remove_expr_with_ints(expr_list):
+	ret = []
+	for expr in expr_list:
+		if not has_ints(expr):
+			ret.append(expr)
+	return ret
 
 
 
@@ -113,7 +128,7 @@ def do_simp(expr, method):
 	elif method == "list":
 		for f in funcs:
 			simp = f(expr)
-		elif method == "all":
+	elif method == "all":
 		for f in funcs:
 			simp = f(expr)
 			simp = megasimp(expr)

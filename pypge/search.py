@@ -88,7 +88,7 @@ class PGE:
 			return 
 
 		for I in range(self.max_iter):
-			print "iter: ", I
+			print "ITER: ", I
 
 			# print "  pop'n..."
 			popd = self.queue.pop(self.pop_count)
@@ -102,9 +102,9 @@ class PGE:
 				ex = self.grower.grow(p)
 				expanded.extend(ex)
 
-			print "\nexpanded:"
-			for e in expanded:
-				print e
+			# print "\nexpanded:"
+			# for e in expanded:
+			# 	print e
 
 			for i,e in enumerate(expanded):
 				

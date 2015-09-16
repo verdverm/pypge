@@ -8,6 +8,9 @@ np.random.seed(23)
 
 from sklearn.metrics import mean_squared_error
 
+x = symbols('x')
+
+
 F_1 = 1.5 * x**2 - x**3
 F_2 = exp(Abs(x)) * sin(x)
 F_3 = x**2 * exp(sin(x)) + x + sin(pi/4.0 - x**3)
