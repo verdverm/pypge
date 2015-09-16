@@ -61,6 +61,7 @@ class PGE:
 		self.queue = select.ModelQueue(self.max_size)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
 
+		self.final = select.ModelQueue(self.max_size)
 
 		# self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
 

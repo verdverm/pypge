@@ -10,9 +10,12 @@ class Model:
 	def __init__(self, expr, xs=None, cs=None):
 		self.id = -1
 		self.parent_id = -1
+		self.iter_id = -1
+
+		self.state = "new"
 
 		self.orig = expr
-		self.expr = expr
+		self.expr = None
 
 		self.xs = None
 		self.cs = None
