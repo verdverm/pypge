@@ -11,8 +11,9 @@ def main():
 		system_type = "explicit",
 		search_vars = "y",
 		usable_vars = "x",
-		usable_funcs = expand.BASIC_BASE,
-		max_iter = 25
+		# usable_funcs = expand.BASIC_BASE,
+		pop_count = 4,
+		max_iter = 5
 		)
 
 	pge_1_var.loop()

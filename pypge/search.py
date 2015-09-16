@@ -10,6 +10,8 @@ import select
 
 import lmfit
 
+from deap.tools import emo
+
 class PGE:
 	
 	def __init__(self,**kwargs):
@@ -60,10 +62,10 @@ class PGE:
 		self.memoizer = memoize.Memoizer(self.vars)
 		self.queue = select.ModelQueue(self.max_size)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
-
 		self.final = select.ModelQueue(self.max_size)
 
-		# self.bases = expand.GenerateInitialModels(self.vars, 2, self.usable_funcs)
+		self.nsga2_list = []
+		self.spea2_list = []
 
 		for i,e in enumerate(self.grower.first_exprs()):
 			m = model.Model(e)
@@ -84,9 +86,12 @@ class PGE:
 					m.error = "errored while scoring"
 					m.state = "errored"
 					continue
+				m.fitness.setValues( (m.size(), m.score) )
 				m.state = "scored"	
 
 				self.queue.push(m)
+				self.nsga2_list.append(m)
+				self.spea2_list.append(m)
 				m.state = "queued"
 
 
@@ -99,25 +104,41 @@ class PGE:
 			return 
 
 		for I in range(self.max_iter):
-			print "ITER: ", I
+			print "\nITER: ", I
 
 			# print "  pop'n..."
+			nsga2_tmp = emo.selNSGA2(self.nsga2_list, len(self.nsga2_list))
+			spea2_tmp = emo.selSPEA2(self.spea2_list, len(self.spea2_list))
+
+			nsga2, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
+			spea2, self.spea2_list = spea2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
+
 			popd = self.queue.pop(self.pop_count)
-			print "\npopped:"
+			print "  popped:"
 			for p in popd:
-				print p
+				print "    ", p
+
+			print "  nsga2:"
+			for p in nsga2:
+				print "    ", p
+
+			print "  spea2:"
+			for p in spea2:
+				print "    ", p
 
 			# print "  expand..."
 			expanded = []
-			for p in popd:
+			for i,p in enumerate(popd):
 				p.state = "popped"
 				ex = self.grower.grow(p)
+				# print "    ", p, " -> ", len(ex)
+				# print "    ", p, "  ~~  ", picked[i]
 				expanded.extend(ex)
 				p.state = "expanded"
 				self.final.push(p)
 				p.state = "finalized"
 
-			# print "\nexpanded:"
+			print "  expanded: ", len(expanded) 
 			# for e in expanded:
 			# 	print e
 
@@ -144,9 +165,12 @@ class PGE:
 							m.error = "errored while scoring"
 							m.state = "errored"
 							continue
+						m.fitness.setValues( (m.size(), m.score) )
 						m.state = "scored"
 						# print "      queue..."
 						self.queue.push(m)
+						self.nsga2_list.append(m)
+						self.spea2_list.append(m)
 						m.state = "queued"
 
 

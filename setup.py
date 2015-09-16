@@ -9,5 +9,5 @@ setup(
   url = 'https://github.com/verdverm/pypge',
   keywords = ['pge', 'prioritized', 'grammar', 'enumeration', 'symbolic', 'regression', 'genetic programming'], # arbitrary keywords
   classifiers = [],
-  install_requires=['sympy', 'pandas', 'lmfit'],
+  install_requires=['sympy', 'pandas', 'lmfit', 'deap'],
 )

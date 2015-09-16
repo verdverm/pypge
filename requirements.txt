@@ -5,3 +5,4 @@ pandas
 scikit-learn
 sympy
 lmfit
+deap

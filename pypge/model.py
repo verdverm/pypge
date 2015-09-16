@@ -3,7 +3,9 @@ C = sympy.Symbol('C')
 CS = [sympy.Symbol("C_"+str(i)) for i in range(8)]
 
 from lmfit import Parameters
+from deap import base, creator
 
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 
 class Model:
 
@@ -23,6 +25,9 @@ class Model:
 		self.params = None
 
 		self.sz = 0
+		self.score = None
+
+		self.fitness = creator.FitnessMin()
 
 		self.rewrite_coeff()
 
