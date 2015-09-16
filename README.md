@@ -1,13 +1,19 @@
 # pypge
 
+[![Build Status](https://travis-ci.org/verdverm/pypge.svg)](https://travis-ci.org/verdverm/pypge)
+[![PyPI](https://img.shields.io/pypi/v/pypge.svg)](https://pypi.python.org/pypi/pypge)
+[![PyPI](https://img.shields.io/pypi/dm/pypge.svg)](https://pypi.python.org/pypi/pypge)
+
+
 Python implementation of the [PGE algorithm](http://dl.acm.org/citation.cfm?id=2463486) 
 (voted Best Paper Gecco 2013)
+
+If you publish using this library, please cite the above paper.
 
 PGE stands for Prioritized Grammar Enumeration and is *the* method for solving the Symbolic Regression problem. 
 
 `This package is under heavy development until this comment is removed`
 
-[![Build Status](https://travis-ci.org/verdverm/pypge.svg)](https://travis-ci.org/verdverm/pypge)
 
 ### Installation
 

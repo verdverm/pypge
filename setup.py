@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'pypge',
   packages = ['pypge'], # this must be the same as the name above
-  version = '0.2',
+  version = '0.3',
   description = 'Prioritized Grammar Enumeration implementation',
   author = 'Tony Worm',
   author_email = 'verdverm@gmial.com',
