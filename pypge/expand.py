@@ -74,9 +74,16 @@ class Grower:
 		add_expands = self._add_extend(model.orig)
 		mul_expands = self._mul_extend(model.orig)
 
-		var_expands = algebra.remove_expr_with_ints(var_expands)
-		add_expands = algebra.remove_expr_with_ints(add_expands)
-		mul_expands = algebra.remove_expr_with_ints(mul_expands)
+		var_expands = algebra.filter_expr_list(var_expands, algebra.default_filters)
+		add_expands = algebra.filter_expr_list(add_expands, algebra.default_filters)
+		mul_expands = algebra.filter_expr_list(mul_expands, algebra.default_filters)
+
+		# add_expands = algebra.remove_expr_with_ints(add_expands)
+		# mul_expands = algebra.remove_expr_with_ints(mul_expands)
+
+		# var_expands = algebra.filter_expr_with_huge_pow_exponent(var_expands)
+		# add_expands = algebra.filter_expr_with_huge_pow_exponent(add_expands)
+		# mul_expands = algebra.filter_expr_with_huge_pow_exponent(mul_expands)
 
 		# print "\nGrowing  ", model.orig
 		# print "  vars:"

@@ -74,9 +74,20 @@ class PGE:
 
 			if did_ins:
 				evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
+				if m.error or not m.fit_result.success:
+					m.state = "errored"
+					continue
+				m.state = "fitted"
 				y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-				m.score = evaluate.Score(tests.F_1_Y, y_pred)
+				m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
+				if err is not None:
+					m.error = "errored while scoring"
+					m.state = "errored"
+					continue
+				m.state = "scored"	
+
 				self.queue.push(m)
+				m.state = "queued"
 
 
 		self.prepared = True
@@ -99,9 +110,12 @@ class PGE:
 			# print "  expand..."
 			expanded = []
 			for p in popd:
+				p.state = "popped"
 				ex = self.grower.grow(p)
 				expanded.extend(ex)
 				p.state = "expanded"
+				self.final.push(p)
+				p.state = "finalized"
 
 			# print "\nexpanded:"
 			# for e in expanded:
@@ -125,7 +139,11 @@ class PGE:
 						m.state = "fitted"
 						# print "      score..."
 						y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-						m.score = evaluate.Score(tests.F_1_Y, y_pred)
+						m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
+						if err is not None:
+							m.error = "errored while scoring"
+							m.state = "errored"
+							continue
 						m.state = "scored"
 						# print "      queue..."
 						self.queue.push(m)

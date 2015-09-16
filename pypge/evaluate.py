@@ -45,7 +45,12 @@ def Eval(model, xs, X_input):
 	return y_pred
 
 def Score(y_true, y_pred):
-	return mean_squared_error(y_true, y_pred)
+	try:
+		result = mean_squared_error(y_true, y_pred)
+		return (result, None)
+	except Exception, e:
+		return (-1, "error: " + str(e))
+
 
 
 
