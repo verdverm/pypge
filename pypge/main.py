@@ -3,11 +3,16 @@ from search import PGE
 import expand
 import tests
 
+from benchmarks import explicit
+
 ###  TODOS
 #
 # - benchmarks
 #   - functions
+#   - multi-dimensional
+#
 # - clean up model class
+#
 # - diffeqs
 #   - models
 #   - evaluation RK4
@@ -46,16 +51,26 @@ import tests
 def main():
 	print "hello pypge!\n"
 
+	xs_ranges = []
+	xs_ranges.append( (-4.0,4.0) )
+	xs_ranges.append( (-4.0,4.0) )
+	xs_ranges.append( (-4.0,4.0) )
+	xs_ranges.append( (-4.0,4.0) )
+	xs_ranges.append( (-4.0,4.0) )
+
+	prob = explicit.Korns_01(xs_ranges, 200,0.1)
+	print prob['name'], prob['eqn']
+
 	pge_1_var = PGE(
 		system_type = "explicit",
 		search_vars = "y",
-		usable_vars = "x",
+		usable_vars = prob['xs_str'],
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		max_iter = 10
 		)
 
-	pge_1_var.fit(tests.F_1_X, tests.F_1_Y)
+	pge_1_var.fit(prob['xpts'], prob['ypts'])
 
 	print ""
 

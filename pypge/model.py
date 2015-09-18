@@ -18,6 +18,7 @@ class Model:
 		self.popped = False
 		self.state = "new"
 		self.error = None
+		self.exception = None
 
 		self.orig = expr
 		self.expr = None
@@ -42,11 +43,8 @@ class Model:
 		self.params = params
 
 	def __str__(self):
-		return str(self.size()) + "  " \
-			  + str(self.score) + "  " \
-			  + str(self.r2) + "  " \
-			  + str(self.evar) + "  " \
-			  + str(self.expr)
+		return "{:2d}  {:12.6f}  {:8.6f}  {:8.6f}  {}" \
+			.format(self.size(),self.score,self.r2,self.evar,self.expr)
 
 
 	def get_coeff(self):

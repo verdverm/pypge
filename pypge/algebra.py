@@ -39,7 +39,7 @@ def filter_has_int_coeff(expr):
 			return True
 	return False
 
-def filter_has_big_pow(expr,big=5):
+def filter_has_big_pow(expr,big=6):
 	if expr.is_Pow:
 		B,E = expr.as_base_exp()
 		if abs(E) > big:

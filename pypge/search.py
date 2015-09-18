@@ -46,8 +46,6 @@ class PGE:
 	def fit(self, X_train,Y_train):
 		self.X_train = X_train
 		self.Y_train = Y_train
-
-		print X_train.shape, Y_train.shape
 		
 		self.loop()
 
@@ -92,7 +90,7 @@ class PGE:
 		for m in to_eval:
 			passed = self.eval(m)
 			if not passed or m.error is not None:
-				print m.error
+				print m.error, m.exception
 				continue
 			self.push(m)
 
@@ -101,9 +99,6 @@ class PGE:
 
 	def loop(self):
 		self.prepare()
-
-		print "  lens: "
-		print "    ", len(self.nsga2_list), len(self.spea2_list)
 
 		for I in range(self.max_iter):
 			print "\nITER: ", I
@@ -142,7 +137,7 @@ class PGE:
 			for m in to_eval:
 				passed = self.eval(m)
 				if not passed or m.error is not None:
-					print m.error
+					print m.error, m.exception
 					continue
 				self.push(m)
 					
@@ -192,7 +187,7 @@ class PGE:
 		# 	# print "    ", p
 
 		popd_list = list(popd_set)
-		print "\n  uniqued pop'd:"
+		print "  uniqued pop'd:"
 		for p in popd_list:
 			p.popped = True
 			print "    ", p
