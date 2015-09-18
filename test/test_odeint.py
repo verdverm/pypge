@@ -60,12 +60,14 @@ answer = scipy.integrate.odeint(springpendulum, y, time)
 xdata =  (Lo + answer[:,0])*np.sin(answer[:,2])
 ydata = -(Lo + answer[:,0])*np.cos(answer[:,2])
 
+import os
 
-import matplotlib.pyplot as plt
+if os.getenv("TRAVIS", "false") != "true":
+	import matplotlib.pyplot as plt
 
-plt.plot(xdata, ydata, 'r-')
-plt.xlabel("Horizontal position")
-plt.ylabel("Vertical position")
+	plt.plot(xdata, ydata, 'r-')
+	plt.xlabel("Horizontal position")
+	plt.ylabel("Vertical position")
 
-plt.show()
+	# plt.show()
 
