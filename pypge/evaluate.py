@@ -52,6 +52,9 @@ def Score(y_true, y_pred):
 		return (-1, "error: " + str(e))
 
 
+def Integrate(model, init_vals, time_vals):
+
+	pass
 
 
 

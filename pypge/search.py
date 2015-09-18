@@ -48,7 +48,9 @@ class PGE:
 
 
 	def check_config(self):
-		if self.system_type == None or self.search_vars == None or self.usable_vars == None:
+		if self.system_type == None \
+		or self.search_vars == None \
+		or self.usable_vars == None:
 			return False
 		return True
 
@@ -67,7 +69,8 @@ class PGE:
 		self.nsga2_list = []
 		self.spea2_list = []
 
-		for i,e in enumerate(self.grower.first_exprs()):
+		first_exprs = self.grower.first_exprs()
+		for i,e in enumerate(first_exprs):
 			m = model.Model(e)
 			did_ins = self.memoizer.insert(m)
 			size = m.size()

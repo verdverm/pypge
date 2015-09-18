@@ -3,6 +3,34 @@ from search import PGE
 import expand
 import tests
 
+###  TODOS
+#
+# - benchmarks
+#   - functions
+# - scikit learn
+#   - pandas DFs
+# - more error metrics
+# - diffeqs
+#   - models
+#   - evaluation RK4
+# - other system types
+#   - invarients
+#   - hidden
+#   - pdes
+# - algebra
+#   - growing / filtering policies
+#   - simplification / expansions
+#   - +C ???
+# - networkx
+# - logging
+# - checkpointing
+# - statistics
+# - Ipython notebook examples
+# - abstract expressions / memoization
+#   - when / where coefficients
+#   - domain alphabet
+#   - sub-expression frequencies in population
+# - distributing to the cloud
 
 def main():
 	print "hello pypge!\n"
