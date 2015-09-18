@@ -5,32 +5,44 @@ import tests
 
 ###  TODOS
 #
+# - more error metrics
 # - benchmarks
 #   - functions
-# - scikit learn
-#   - pandas DFs
-# - more error metrics
+# - clean up models
 # - diffeqs
 #   - models
 #   - evaluation RK4
-# - other system types
-#   - invarients
-#   - hidden
-#   - pdes
+#
+# - final output(s)
+# - logging
+# - statistics
+# - checkpointing
+#
+#
+#
+# - networkx
 # - algebra
 #   - growing / filtering policies
 #   - simplification / expansions
 #   - +C ???
-# - networkx
-# - logging
-# - checkpointing
-# - statistics
+#
 # - Ipython notebook examples
+# - scikit learn
+#   - pandas DFs
+#
+#
+#
+# - distributing to the cloud, pyspark
+#
+# - other system types
+#   - invarients
+#   - hidden
+#   - pdes
+#
 # - abstract expressions / memoization
 #   - when / where coefficients
 #   - domain alphabet
 #   - sub-expression frequencies in population
-# - distributing to the cloud
 
 def main():
 	print "hello pypge!\n"
@@ -40,11 +52,11 @@ def main():
 		search_vars = "y",
 		usable_vars = "x",
 		# usable_funcs = expand.BASIC_BASE,
-		pop_count = 4,
-		max_iter = 5
+		pop_count = 3,
+		max_iter = 10
 		)
 
-	pge_1_var.loop()
+	pge_1_var.fit(tests.F_1_X, tests.F_1_Y)
 
 	print ""
 

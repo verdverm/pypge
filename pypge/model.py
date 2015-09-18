@@ -14,6 +14,8 @@ class Model:
 		self.parent_id = -1
 		self.iter_id = -1
 
+		# TODO add multiple boolean states, or enum consts
+		self.popped = False
 		self.state = "new"
 		self.error = None
 

@@ -1,15 +1,10 @@
-import sympy
-
-import tests
-
 import model
 import expand
 import memoize
 import evaluate
-import select
 
+import sympy
 import lmfit
-
 from deap.tools import emo
 
 class PGE:
@@ -23,6 +18,8 @@ class PGE:
 		self.max_size = 64
 		self.min_depth = 1
 		self.max_depth = 6
+
+		self.max_power = 5
 
 		self.zero_epsilon = 1e-6
 		self.err_method = "mse"
@@ -47,6 +44,20 @@ class PGE:
 		self.prepare()
 
 
+	# sklearn estimator interface functions
+	def fit(self, X_train,Y_train):
+		self.X_train = X_train
+		self.Y_train = Y_train
+
+		print X_train.shape, Y_train.shape
+		
+		self.loop()
+
+	def predict(self, X_data):
+		pass
+		
+
+
 	def check_config(self):
 		if self.system_type == None \
 		or self.search_vars == None \
@@ -61,15 +72,19 @@ class PGE:
 			print "ERROR: config missing values"
 			return
 
+
 		self.memoizer = memoize.Memoizer(self.vars)
-		self.queue = select.ModelQueue(self.max_size)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
-		self.final = select.ModelQueue(self.max_size)
 
 		self.nsga2_list = []
 		self.spea2_list = []
+		self.nondom_list = []
+		self.lognondom_list = []
+
+		self.final = []
 
 		first_exprs = self.grower.first_exprs()
+		to_eval = []
 		for i,e in enumerate(first_exprs):
 			m = model.Model(e)
 			did_ins = self.memoizer.insert(m)
@@ -78,25 +93,13 @@ class PGE:
 			# print i,m.expr, size, m.id
 
 			if did_ins:
-				evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
-				if m.error or not m.fit_result.success:
-					m.state = "errored"
-					continue
-				m.state = "fitted"
-				y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-				m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
-				if err is not None:
-					m.error = "errored while scoring"
-					m.state = "errored"
-					continue
-				m.fitness.setValues( (m.size(), m.score) )
-				m.state = "scored"	
+				to_eval.append(m)
 
-				self.queue.push(m)
-				self.nsga2_list.append(m)
-				self.spea2_list.append(m)
-				m.state = "queued"
-
+		for m in to_eval:
+			self.eval(m)
+			if m.error is not None:
+				continue
+			self.push(m)
 
 		self.prepared = True
 
@@ -109,25 +112,7 @@ class PGE:
 		for I in range(self.max_iter):
 			print "\nITER: ", I
 
-			# print "  pop'n..."
-			nsga2_tmp = emo.selNSGA2(self.nsga2_list, len(self.nsga2_list))
-			spea2_tmp = emo.selSPEA2(self.spea2_list, len(self.spea2_list))
-
-			nsga2, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
-			spea2, self.spea2_list = spea2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
-
-			popd = self.queue.pop(self.pop_count)
-			print "  popped:"
-			for p in popd:
-				print "    ", p
-
-			print "  nsga2:"
-			for p in nsga2:
-				print "    ", p
-
-			print "  spea2:"
-			for p in spea2:
-				print "    ", p
+			popd = self.pop()
 
 			# print "  expand..."
 			expanded = []
@@ -138,59 +123,114 @@ class PGE:
 				# print "    ", p, "  ~~  ", picked[i]
 				expanded.extend(ex)
 				p.state = "expanded"
-				self.final.push(p)
+				self.final.append(p)
 				p.state = "finalized"
 
 			print "  expanded: ", len(expanded) 
 			# for e in expanded:
 			# 	print e
 
+			to_eval = []
 			for i,e in enumerate(expanded):
 
-					# print "  memoize..."
-					m = model.Model(e)
-					did_ins = self.memoizer.insert(m)
-					size = m.size()
-					m.rewrite_coeff()
+				# print "  memoize..."
+				m = model.Model(e)
+				did_ins = self.memoizer.insert(m)
+				size = m.size()
+				m.rewrite_coeff()
 
-					# print "    if new:"
-					if did_ins:
-						# print "      train..."
-						evaluate.Fit(m, self.vars, tests.F_1_X, tests.F_1_Y)
-						if m.error or not m.fit_result.success:
-							m.state = "errored"
-							continue
-						m.state = "fitted"
-						# print "      score..."
-						y_pred = evaluate.Eval(m, self.vars, tests.F_1_X)
-						m.score, err = evaluate.Score(tests.F_1_Y, y_pred)
-						if err is not None:
-							m.error = "errored while scoring"
-							m.state = "errored"
-							continue
-						m.fitness.setValues( (m.size(), m.score) )
-						m.state = "scored"
-						# print "      queue..."
-						self.queue.push(m)
-						self.nsga2_list.append(m)
-						self.spea2_list.append(m)
-						m.state = "queued"
+				# Do some graph stuff here?
+				if did_ins:
+					to_eval.append(m)
+
+			for m in to_eval:
+				passed = self.eval(m)
+				if m.error is not None:
+					continue
+				self.push(m)
+					
+
+	def push(self, model):
+		# self.queue.push(model)
+		self.nsga2_list.append(model)
+		self.spea2_list.append(model)
+		# self.nondom_list.append(model)
+		# self.lognondom_list.append(model)
+		model.state = "queued"
+
+	def pop(self):
+		# print "  pop'n..."
+		nsga2_tmp = emo.selNSGA2(self.nsga2_list, len(self.nsga2_list))
+		spea2_tmp = emo.selSPEA2(self.spea2_list, len(self.spea2_list))
+		# nondom_tmp = emo.sortNondominated(self.nondom_list, len(self.nondom_list))
+		# lognondom_tmp = emo.sortLogNondominated(self.lognondom_list, len(self.lognondom_list))
+
+		# nondom_tmp = [item for sublist in nondom_tmp for item in sublist]
+		# lognondom_tmp = [item for sublist in lognondom_tmp for item in sublist]
+
+		self.nsga2_popd, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
+		self.spea2_popd, self.spea2_list = spea2_tmp[:self.pop_count], spea2_tmp[self.pop_count:]
+		# self.nondom_popd, self.nondom_list = nondom_tmp[:self.pop_count], nondom_tmp[self.pop_count:]
+		# self.lognondom_popd, self.lognondom_list = lognondom_tmp[:self.pop_count], lognondom_tmp[self.pop_count:]
+
+		popd_set = set()
+		# print "  nsga2:"
+		for p in self.nsga2_popd:
+			popd_set.add(p)
+			# print "    ", p
+
+		# print "  spea2:"
+		for p in self.spea2_popd:
+			popd_set.add(p)
+			# print "    ", p
+
+		# # print "  nondom:"
+		# for p in self.nondom_popd:
+		# 	popd_set.add(p)
+		# 	# print "    ", p
+
+		# # print "  lognondom:"
+		# for p in self.lognondom_popd:
+		# 	popd_set.add(p)
+		# 	# print "    ", p
+
+		popd_list = list(popd_set)
+		print "\n  uniqued pop'd:"
+		for p in popd_list:
+			p.popped = True
+			print "    ", p
+
+		self.nsga2_list = [m for m in self.nsga2_list if not m.popped]
+		self.spea2_list = [m for m in self.spea2_list if not m.popped]
+		# self.nondom_list = [m for m in self.nondom_list if not m.popped]
+		# self.lognondom_list = [m for m in self.lognondom_list if not m.popped]
+
+		return popd_list
 
 
-
-
-	# sklearn estimator interface functions
-	def fit(self, X_train,Y_train):
-		self.X_train = X_train
-		self.Y_train = Y_train
-
-		print X_train.shape, Y_train.shape
+	def eval(self, model):
+		# fit the model
+		evaluate.Fit(model, self.vars, self.X_train, self.Y_train)
+		if model.error or not model.fit_result.success:
+			model.state = "errored"
+			return False
+		model.state = "fitted"
 		
-		self.loop()
-
-	def predict(self, X_data):
-		pass
+		# score the model
+		y_pred = evaluate.Eval(model, self.vars, self.X_train)
+		model.score, err = evaluate.Score(self.Y_train, y_pred)
+		if err is not None:
+			model.error = "errored while scoring"
+			model.state = "errored"
+			return False
 		
+		# build the fitness for selection
+		vals = (model.size(), model.score)
+		model.fitness.setValues( vals )
+		model.state = "scored"
+
+		return True # passed
+
 
 
 
