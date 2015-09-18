@@ -5,10 +5,9 @@ import tests
 
 ###  TODOS
 #
-# - more error metrics
 # - benchmarks
 #   - functions
-# - clean up models
+# - clean up model class
 # - diffeqs
 #   - models
 #   - evaluation RK4

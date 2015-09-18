@@ -3,6 +3,7 @@ import expand
 import memoize
 import evaluate
 
+import numpy
 import sympy
 import lmfit
 from deap.tools import emo
@@ -39,10 +40,7 @@ class PGE:
 		if type(self.vars) is sympy.Symbol:
 			self.vars = [self.vars]
 
-
 		self.prepared = False
-		self.prepare()
-
 
 	# sklearn estimator interface functions
 	def fit(self, X_train,Y_train):
@@ -52,10 +50,6 @@ class PGE:
 		print X_train.shape, Y_train.shape
 		
 		self.loop()
-
-	def predict(self, X_data):
-		pass
-		
 
 
 	def check_config(self):
@@ -96,8 +90,9 @@ class PGE:
 				to_eval.append(m)
 
 		for m in to_eval:
-			self.eval(m)
-			if m.error is not None:
+			passed = self.eval(m)
+			if not passed or m.error is not None:
+				print m.error
 				continue
 			self.push(m)
 
@@ -105,9 +100,10 @@ class PGE:
 
 
 	def loop(self):
-		if not self.prepared:
-			print "PGE not prepared"
-			return 
+		self.prepare()
+
+		print "  lens: "
+		print "    ", len(self.nsga2_list), len(self.spea2_list)
 
 		for I in range(self.max_iter):
 			print "\nITER: ", I
@@ -145,7 +141,8 @@ class PGE:
 
 			for m in to_eval:
 				passed = self.eval(m)
-				if m.error is not None:
+				if not passed or m.error is not None:
+					print m.error
 					continue
 				self.push(m)
 					
@@ -218,11 +215,26 @@ class PGE:
 		
 		# score the model
 		y_pred = evaluate.Eval(model, self.vars, self.X_train)
-		model.score, err = evaluate.Score(self.Y_train, y_pred)
+
+		model.score, err = evaluate.Score(self.Y_train, y_pred, self.err_method)
 		if err is not None:
+			print err
 			model.error = "errored while scoring"
 			model.state = "errored"
 			return False
+		
+		model.r2, err = evaluate.Score(self.Y_train, y_pred, "r2")
+		if err is not None:
+			model.error = "errored while r2'n"
+			model.state = "errored"
+			return False
+		
+		model.evar, err = evaluate.Score(self.Y_train, y_pred, "evar")
+		if err is not None:
+			model.error = "errored while evar'n"
+			model.state = "errored"
+			return False
+		
 		
 		# build the fitness for selection
 		vals = (model.size(), model.score)

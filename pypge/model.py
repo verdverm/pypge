@@ -28,6 +28,8 @@ class Model:
 
 		self.sz = 0
 		self.score = None
+		self.r2 = None
+		self.evar = None
 
 		self.fitness = creator.FitnessMin()
 
@@ -40,7 +42,11 @@ class Model:
 		self.params = params
 
 	def __str__(self):
-		return str(self.size()) + "  " + str(self.score) + "  " + str(self.expr)
+		return str(self.size()) + "  " \
+			  + str(self.score) + "  " \
+			  + str(self.r2) + "  " \
+			  + str(self.evar) + "  " \
+			  + str(self.expr)
 
 
 	def get_coeff(self):

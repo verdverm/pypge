@@ -4,7 +4,7 @@ import sympy
 
 from lmfit import minimize, Parameters
 
-from sklearn.metrics import mean_squared_error
+from sklearn import metrics
 
 
 def Fit(model, xs, X_train, Y_train):
@@ -44,12 +44,28 @@ def Eval(model, xs, X_input):
 	y_pred = f(X_input)
 	return y_pred
 
-def Score(y_true, y_pred):
+def Score(y_true, y_pred, err_metric):
 	try:
-		result = mean_squared_error(y_true, y_pred)
+		if err_metric == "mae":
+			result = metrics.mean_absolute_error(y_true, y_pred)
+		elif err_metric == "mse":
+			result = metrics.mean_squared_error(y_true, y_pred)
+		elif err_metric == "rmae":
+			result = metrics.mean_absolute_error(y_true, y_pred)
+			result = np.sqrt(result)
+		elif err_metric == "rmse":
+			result = metrics.mean_squared_error(y_true, y_pred)
+			result = np.sqrt(result)
+		elif err_metric == "r2":
+			result = metrics.r2_score(y_true, y_pred)
+		elif err_metric == "evar":
+			result = metrics.explained_variance_score(y_true, y_pred)
+		else:
+			return (None, "error: unknown error metric")
+
 		return (result, None)
 	except Exception, e:
-		return (-1, "error: " + str(e))
+		return (None, "error: " + str(e))
 
 
 def Integrate(model, init_vals, time_vals):
