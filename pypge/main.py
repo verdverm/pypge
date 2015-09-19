@@ -1,27 +1,26 @@
 from search import PGE
 
 import expand
-import tests
 
 from benchmarks import explicit
 
 ###  TODOS
 #
-# - benchmarks
-#   - functions
-#   - multi-dimensional
 #
 # - clean up model class
 #
 # - diffeqs
 #   - models
 #   - evaluation RK4
+#   - benchmarks
 #
-# - final output(s)
+#
+# - final processing & output(s)
+#   - mid process too?
 # - logging
 # - statistics
 # - checkpointing
-#
+# - peek eval (others from 2nd paper)
 #
 #
 # - networkx
@@ -30,10 +29,11 @@ from benchmarks import explicit
 #   - simplification / expansions
 #   - +C ???
 #
+#
 # - Ipython notebook examples
 # - scikit learn
 #   - pandas DFs
-#
+#   - get/set parameters
 #
 #
 # - distributing to the cloud, pyspark
@@ -51,14 +51,7 @@ from benchmarks import explicit
 def main():
 	print "hello pypge!\n"
 
-	xs_ranges = []
-	xs_ranges.append( (-4.0,4.0) )
-	xs_ranges.append( (-4.0,4.0) )
-	xs_ranges.append( (-4.0,4.0) )
-	xs_ranges.append( (-4.0,4.0) )
-	xs_ranges.append( (-4.0,4.0) )
-
-	prob = explicit.Korns_01(xs_ranges, 200,0.1)
+	prob = explicit.Nguyen_12(0.1)
 	print prob['name'], prob['eqn']
 
 	pge_1_var = PGE(

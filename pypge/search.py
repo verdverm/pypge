@@ -8,6 +8,8 @@ import sympy
 import lmfit
 from deap.tools import emo
 
+import networkx as nx
+
 class PGE:
 	
 	def __init__(self,**kwargs):
@@ -40,7 +42,28 @@ class PGE:
 		if type(self.vars) is sympy.Symbol:
 			self.vars = [self.vars]
 
-		self.prepared = False
+		if not self.check_config():
+			print "ERROR: config missing values"
+			return
+
+		self.memoizer = memoize.Memoizer(self.vars)
+		self.grower = expand.Grower(self.vars, self.usable_funcs)
+
+		# Pareto Front stuff
+		self.nsga2_list = []
+		self.spea2_list = []
+		self.nondom_list = []
+		self.lognondom_list = []
+		self.final = []
+
+		# Relationship Graph
+		self.root_model = model.Model(None)
+		self.root_model.id = -1
+
+		self.graph = nx.MultiDiGraph()
+		self.graph.add_node(self.root_model)
+
+
 
 	# sklearn estimator interface functions
 	def fit(self, X_train,Y_train):
@@ -58,27 +81,12 @@ class PGE:
 		return True
 
 
-	def prepare(self):
+	def loop(self):
 
-		if not self.check_config():
-			print "ERROR: config missing values"
-			return
-
-
-		self.memoizer = memoize.Memoizer(self.vars)
-		self.grower = expand.Grower(self.vars, self.usable_funcs)
-
-		self.nsga2_list = []
-		self.spea2_list = []
-		self.nondom_list = []
-		self.lognondom_list = []
-
-		self.final = []
-
+		# preloop setup (generates,evals,queues first models)
 		first_exprs = self.grower.first_exprs()
 		to_eval = []
-		for i,e in enumerate(first_exprs):
-			m = model.Model(e)
+		for i,m in enumerate(first_exprs):
 			did_ins = self.memoizer.insert(m)
 			size = m.size()
 			m.rewrite_coeff()
@@ -93,13 +101,11 @@ class PGE:
 				print m.error, m.exception
 				continue
 			self.push(m)
+			self.graph.add_node(m)
+			self.graph.add_edge(self.root_model, m, relation="first")
 
-		self.prepared = True
 
-
-	def loop(self):
-		self.prepare()
-
+		# main loop for # iterations
 		for I in range(self.max_iter):
 			print "\nITER: ", I
 
@@ -122,10 +128,8 @@ class PGE:
 			# 	print e
 
 			to_eval = []
-			for i,e in enumerate(expanded):
+			for i,m in enumerate(expanded):
 
-				# print "  memoize..."
-				m = model.Model(e)
 				did_ins = self.memoizer.insert(m)
 				size = m.size()
 				m.rewrite_coeff()
@@ -140,6 +144,10 @@ class PGE:
 					print m.error, m.exception
 					continue
 				self.push(m)
+
+		# finalization
+		self.final_paretos = emo.sortLogNondominated(self.final, len(self.final))
+
 					
 
 	def push(self, model):

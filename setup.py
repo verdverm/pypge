@@ -1,7 +1,7 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 setup(
   name = 'pypge',
-  packages = ['pypge'], # this must be the same as the name above
+  packages = find_packages(), # this must be the same as the name above
   version = '0.3',
   description = 'Prioritized Grammar Enumeration implementation',
   author = 'Tony Worm',

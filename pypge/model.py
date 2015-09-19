@@ -10,9 +10,9 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 class Model:
 
 	def __init__(self, expr, xs=None, cs=None):
-		self.id = -1
-		self.parent_id = -1
-		self.iter_id = -1
+		self.id = -2
+		self.parent_id = -2
+		self.iter_id = -2
 
 		# TODO add multiple boolean states, or enum consts
 		self.popped = False
@@ -22,6 +22,9 @@ class Model:
 
 		self.orig = expr
 		self.expr = None
+
+		if expr is None:
+			return
 
 		self.xs = None
 		self.cs = None
@@ -41,6 +44,12 @@ class Model:
 			params.add('C_'+str(i), value=1.0)
 
 		self.params = params
+
+	def __hash__(self):
+		return self.id
+
+	def __cmp__(self, other):
+		return cmp(self.id, other.id)
 
 	def __str__(self):
 		return "{:2d}  {:12.6f}  {:8.6f}  {:8.6f}  {}" \

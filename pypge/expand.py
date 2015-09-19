@@ -6,6 +6,7 @@ init_printing(use_unicode=True)
 from itertools import combinations, combinations_with_replacement as combos
 
 import algebra
+import model
 
 BASIC_BASE = (exp, cos, sin)
 BASIC_MISC = (Abs, sqrt, log, exp)
@@ -65,25 +66,22 @@ class Grower:
 
 		ret_exprs = mid_exprs + add_exprs + plus_C_exprs
 
-		return ret_exprs
+		models = [model.Model(e) for e in ret_exprs]
+		for m in models:
+			m.parent_id = -1
+
+		return models
 
 
-	def grow(self, model):
+	def grow(self, M):
 
-		var_expands = self._var_sub(model.orig)
-		add_expands = self._add_extend(model.orig)
-		mul_expands = self._mul_extend(model.orig)
+		var_expands = self._var_sub(M.orig)
+		add_expands = self._add_extend(M.orig)
+		mul_expands = self._mul_extend(M.orig)
 
 		var_expands = algebra.filter_expr_list(var_expands, algebra.default_filters)
 		add_expands = algebra.filter_expr_list(add_expands, algebra.default_filters)
 		mul_expands = algebra.filter_expr_list(mul_expands, algebra.default_filters)
-
-		# add_expands = algebra.remove_expr_with_ints(add_expands)
-		# mul_expands = algebra.remove_expr_with_ints(mul_expands)
-
-		# var_expands = algebra.filter_expr_with_huge_pow_exponent(var_expands)
-		# add_expands = algebra.filter_expr_with_huge_pow_exponent(add_expands)
-		# mul_expands = algebra.filter_expr_with_huge_pow_exponent(mul_expands)
 
 		# print "\nGrowing  ", model.orig
 		# print "  vars:"
@@ -96,7 +94,12 @@ class Grower:
 		# for e in mul_expands:
 		# 	print "    ", algebra.has_ints(e), e
 
-		return var_expands + add_expands + mul_expands
+		exprs = var_expands + add_expands + mul_expands
+		models = [model.Model(e) for e in exprs]
+		for m in models:
+			m.parend_id = M.id
+
+		return models
 
 
 	def _var_sub(self, expr, limit_sub=False):
