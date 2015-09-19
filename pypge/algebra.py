@@ -4,12 +4,6 @@ from sympy import *
 from sympy.strategies.tree import greedy, brute
 init_printing(use_unicode=True)
 
-
-x = symbols('x')
-print "x int ? ", x.is_Integer
-
-
-
 ## Filters on expressions
 ##
 ## TODO turn this into a filter which takes a list of functions
@@ -49,45 +43,6 @@ def filter_has_big_pow(expr,big=6):
 	return False
 
 default_filters = [filter_has_int_coeff,filter_has_big_pow]
-
-def has_ints(expr):
-	for e in preorder_traversal(expr):
-		if e.is_Mul:
-			cs, _ = e.as_coeff_Mul()
-			# print "   ** ", cs, cs == numbers.One, type(cs)
-			if type(cs) != numbers.One:
-				return True
-		if e.is_Add:
-			cs, _ = e.as_coeff_Add()
-			# print "   ++ ", cs, cs == numbers.Zero, type(cs)
-			if type(cs) != numbers.Zero:
-				return True
-	return False
-
-def has_big_pow(expr, big=6):
-	for e in preorder_traversal(expr):
-		if e.is_Pow:
-			B,E = e.as_base_exp()
-			if abs(E) > big:
-				return True
-	return False
-
-
-def remove_expr_with_ints(expr_list):
-	ret = []
-	for expr in expr_list:
-		if not has_ints(expr):
-			ret.append(expr)
-	return ret
-
-
-def filter_expr_with_huge_pow_exponent(expr_list):
-	ret = []
-	for expr in expr_list:
-		if not has_big_pow(expr):
-			ret.append(expr)
-	return ret
-
 
 
 

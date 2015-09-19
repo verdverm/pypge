@@ -19,6 +19,7 @@ addons:
       - liblapack-dev 
       - libatlas-base-dev 
       - gfortran
+      - libgraphviz-dev
 
 before_install:
   # Setup anaconda
@@ -33,8 +34,8 @@ before_install:
 
 # command to install dependencies
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib pytest dateutil pandas scikit-learn sympy
-  - pip install lmfit
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib pytest dateutil pandas scikit-learn sympy networkx pyyaml
+  - pip install lmfit deap pygraphviz pydot
   - python setup.py install
 
 # command to run tests

@@ -43,6 +43,8 @@ class Memoizer:
 			# print "   ", ii, ff
 		return iis, ffs
 
+	def get_by_id(self, i):
+		return self.models[i]
 
 
 class Mapper:
