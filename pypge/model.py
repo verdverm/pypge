@@ -22,9 +22,7 @@ class Model:
 
 		self.orig = expr
 		self.expr = None
-
-		if expr is None:
-			return
+		self.pretty = None
 
 		self.xs = None
 		self.cs = None
@@ -39,11 +37,6 @@ class Model:
 
 		self.rewrite_coeff()
 
-		params = Parameters()
-		for i,c in enumerate(self.cs):
-			params.add('C_'+str(i), value=1.0)
-
-		self.params = params
 
 	def __hash__(self):
 		return self.id
@@ -52,9 +45,18 @@ class Model:
 		return cmp(self.id, other.id)
 
 	def __str__(self):
-		return "{:2d}  {:12.6f}  {:8.6f}  {:8.6f}  {}" \
-			.format(self.size(),self.score,self.r2,self.evar,self.expr)
+		if self.pretty is None:
+			self.pretty_expr()
+		return "{:5d}:  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:s}" \
+			.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
+		# return "{:5}:  {:5} {:2} {:12}  {:8}  {:8}  {}" \
+		# 	.format(self.id,self.parent_id,self.sz,self.score,self.r2,self.evar,self.expr)
+		# # return "%5d %2d %12.6f  %8.6f  %8.6f  %s" % (self.id, self.sz,self.score,self.r2,self.evar,self.expr)
 
+	def pretty_expr(self, float_format="%.3f"):
+		c_sub = [ (str(c), float_format % self.params[str(c)].value) for c in self.cs ]
+		self.pretty = self.expr.subs(c_sub)
+		return self.pretty
 
 	def get_coeff(self):
 		if self.coeff is not None:
@@ -79,6 +81,11 @@ class Model:
 		self.expr = expr
 		self.cs = CS[:ii]
 
+		params = Parameters()
+		for i,c in enumerate(self.cs):
+			params.add('C_'+str(i), value=1.0)
+		self.params = params
+
 
 	def _rewrite_coeff_helper(self, expr, ii):
 		ret = expr
@@ -99,21 +106,3 @@ class Model:
 			ret = expr.func(*args)
 		return ret,ii
 
-
-
-# x,y,z = sympy.symbols("x y z")
-
-# print cs
-
-# f = C*x+C*y+C*z
-# F, ii = rewrite_coeff_helper(f,0)
-# G, ii = rewrite_coeff_helper(f,3)
-# args = (x,y,z)
-# F = f.func(*args)
-# print F
-
-# g = f.subs(cs)
-# print f
-# print F
-# print G
-# print g

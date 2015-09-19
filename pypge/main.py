@@ -8,6 +8,9 @@ from benchmarks import explicit
 #
 #
 # - clean up model class
+#   - move eval
+#   - rename things
+#   - sed S/expr/modl/
 #
 # - diffeqs
 #   - models
@@ -19,7 +22,12 @@ from benchmarks import explicit
 #   - mid process too?
 # - logging
 # - statistics
-# - checkpointing
+#   - memotree
+#   - within model
+#   - for expansions
+#   - what's improving and not
+#   - subexpressions
+# - checkpointing & continuing a run
 # - peek eval (others from 2nd paper)
 #
 #
@@ -34,6 +42,8 @@ from benchmarks import explicit
 # - scikit learn
 #   - pandas DFs
 #   - get/set parameters
+#   - pipelining
+#   - gridsearch
 #
 #
 # - distributing to the cloud, pyspark
@@ -54,27 +64,16 @@ def main():
 	prob = explicit.Nguyen_12(0.1)
 	print prob['name'], prob['eqn']
 
-	pge_1_var = PGE(
+	pge = PGE(
 		system_type = "explicit",
 		search_vars = "y",
 		usable_vars = prob['xs_str'],
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
-		max_iter = 10
+		max_iter = 8
 		)
 
-	pge_1_var.fit(prob['xpts'], prob['ypts'])
+	pge.fit(prob['xpts'], prob['ypts'])
 
-	print ""
-
-	# pge_2_var = PGE(
-	# 	system_type = "explicit",
-	# 	search_vars = "y",
-	# 	usable_vars = "x w",
-	# 	usable_funcs = expand.BASIC_TRIG,
-	# 	max_iter = 10
-	# 	)
-
-	# pge.fit( tests.F_2_X, tests.F_2_Y)
 
 main()

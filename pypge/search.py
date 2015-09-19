@@ -48,6 +48,7 @@ class PGE:
 
 		self.memoizer = memoize.Memoizer(self.vars)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
+		self.iter_expands = []
 
 		# Pareto Front stuff
 		self.nsga2_list = []
@@ -57,12 +58,18 @@ class PGE:
 		self.final = []
 
 		# Relationship Graph
-		self.root_model = model.Model(None)
-		self.root_model.id = -1
+		r = sympy.Symbol("root")
+		self.root_model = model.Model(r)
+		R = self.root_model
+		R.id = -1
+		R.score = 9999999999999.
+		R.r2 = -100.
+		R.evar = -100.
+
+		self.iter_expands.append([R])
 
 		self.graph = nx.MultiDiGraph()
-		self.graph.add_node(self.root_model)
-
+		self.graph.add_node(R, modl=R)
 
 
 	# sklearn estimator interface functions
@@ -84,16 +91,27 @@ class PGE:
 	def loop(self):
 
 		# preloop setup (generates,evals,queues first models)
-		first_exprs = self.grower.first_exprs()
+		self.first_exprs = self.grower.first_exprs()
+		self.iter_expands.append(self.first_exprs)
+
 		to_eval = []
-		for i,m in enumerate(first_exprs):
+		for i,m in enumerate(self.first_exprs):
+			found, f_modl = self.memoizer.lookup(m)
+			if found:
+				p = self.memoizer.get_by_id(m.parent_id)
+				self.graph.add_edge(p, m, relation="ex_dupd")
+				continue
+
 			did_ins = self.memoizer.insert(m)
 			size = m.size()
 			m.rewrite_coeff()
-			# print i,m.expr, size, m.id
 
 			if did_ins:
 				to_eval.append(m)
+				# add node and edge
+				self.graph.add_node(m, modl=m)
+				p = self.memoizer.get_by_id(m.parent_id)
+				self.graph.add_edge(p, m, relation="expanded")
 
 		for m in to_eval:
 			passed = self.eval(m)
@@ -101,8 +119,7 @@ class PGE:
 				print m.error, m.exception
 				continue
 			self.push(m)
-			self.graph.add_node(m)
-			self.graph.add_edge(self.root_model, m, relation="first")
+
 
 
 		# main loop for # iterations
@@ -111,32 +128,40 @@ class PGE:
 
 			popd = self.pop()
 
-			# print "  expand..."
 			expanded = []
 			for i,p in enumerate(popd):
 				p.state = "popped"
-				ex = self.grower.grow(p)
-				# print "    ", p, " -> ", len(ex)
-				# print "    ", p, "  ~~  ", picked[i]
-				expanded.extend(ex)
+				modls = self.grower.grow(p)
+
+				expanded.extend(modls)
 				p.state = "expanded"
 				self.final.append(p)
 				p.state = "finalized"
 
 			print "  expanded: ", len(expanded) 
-			# for e in expanded:
-			# 	print e
+
+			self.iter_expands.append(expanded)
+
 
 			to_eval = []
 			for i,m in enumerate(expanded):
+				found, f_modl = self.memoizer.lookup(m)
+				if found:
+					p = self.memoizer.get_by_id(m.parent_id)
+					self.graph.add_edge(p, m, relation="ex_dupd")
+					continue
 
 				did_ins = self.memoizer.insert(m)
 				size = m.size()
 				m.rewrite_coeff()
 
-				# Do some graph stuff here?
 				if did_ins:
 					to_eval.append(m)
+					# add node and edge
+					self.graph.add_node(m, modl=m)
+					p = self.memoizer.get_by_id(m.parent_id)
+					self.graph.add_edge(p, m, relation="expanded")
+				
 
 			for m in to_eval:
 				passed = self.eval(m)
@@ -145,33 +170,48 @@ class PGE:
 					continue
 				self.push(m)
 
-		# finalization
-		self.final_paretos = emo.sortLogNondominated(self.final, len(self.final))
 
+		# finalization
+		print "\n\nFinalizing\n\n"
+
+		# pull all non-expanded models in queue out and push into final
+		# could also use spea2_list here, they should have same contents
+		self.final = self.final + self.nsga2_list 
+
+		# generate final pareto fronts
+		final_list = emo.selNSGA2(self.final, len(self.final))
+
+		# print first 4 pareto fronts
+		print "Final Results"
+		print "      id:  sz           error         r2    expld_vari    theModel"
+		print "-----------------------------------------------------------------------------------"
+		for m in final_list[:32]:
+			print "  ", m
+		
+		print "\n\n", nx.info(self.graph), "\n\n"
+
+		# handle issue with extra stray node with parent_id == -2 (at end of nodes list)
+		del_n = []
+		for n in nx.nodes_iter(self.graph):
+			if n.score is None:
+				del_n.append(n)
+		for n in del_n:
+			self.graph.remove_node(n)
+
+		print "\n\ndone\n\n"
 					
 
 	def push(self, model):
-		# self.queue.push(model)
 		self.nsga2_list.append(model)
 		self.spea2_list.append(model)
-		# self.nondom_list.append(model)
-		# self.lognondom_list.append(model)
 		model.state = "queued"
 
 	def pop(self):
-		# print "  pop'n..."
 		nsga2_tmp = emo.selNSGA2(self.nsga2_list, len(self.nsga2_list))
 		spea2_tmp = emo.selSPEA2(self.spea2_list, len(self.spea2_list))
-		# nondom_tmp = emo.sortNondominated(self.nondom_list, len(self.nondom_list))
-		# lognondom_tmp = emo.sortLogNondominated(self.lognondom_list, len(self.lognondom_list))
-
-		# nondom_tmp = [item for sublist in nondom_tmp for item in sublist]
-		# lognondom_tmp = [item for sublist in lognondom_tmp for item in sublist]
 
 		self.nsga2_popd, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
 		self.spea2_popd, self.spea2_list = spea2_tmp[:self.pop_count], spea2_tmp[self.pop_count:]
-		# self.nondom_popd, self.nondom_list = nondom_tmp[:self.pop_count], nondom_tmp[self.pop_count:]
-		# self.lognondom_popd, self.lognondom_list = lognondom_tmp[:self.pop_count], lognondom_tmp[self.pop_count:]
 
 		popd_set = set()
 		# print "  nsga2:"
@@ -184,15 +224,6 @@ class PGE:
 			popd_set.add(p)
 			# print "    ", p
 
-		# # print "  nondom:"
-		# for p in self.nondom_popd:
-		# 	popd_set.add(p)
-		# 	# print "    ", p
-
-		# # print "  lognondom:"
-		# for p in self.lognondom_popd:
-		# 	popd_set.add(p)
-		# 	# print "    ", p
 
 		popd_list = list(popd_set)
 		print "  uniqued pop'd:"
@@ -202,8 +233,6 @@ class PGE:
 
 		self.nsga2_list = [m for m in self.nsga2_list if not m.popped]
 		self.spea2_list = [m for m in self.spea2_list if not m.popped]
-		# self.nondom_list = [m for m in self.nondom_list if not m.popped]
-		# self.lognondom_list = [m for m in self.lognondom_list if not m.popped]
 
 		return popd_list
 

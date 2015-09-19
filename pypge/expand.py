@@ -83,21 +83,10 @@ class Grower:
 		add_expands = algebra.filter_expr_list(add_expands, algebra.default_filters)
 		mul_expands = algebra.filter_expr_list(mul_expands, algebra.default_filters)
 
-		# print "\nGrowing  ", model.orig
-		# print "  vars:"
-		# for e in var_expands:
-		# 	print "    ", algebra.has_ints(e), e
-		# print "  adds:"
-		# for e in add_expands:
-		# 	print "    ", algebra.has_ints(e), e
-		# print "  muls:"
-		# for e in mul_expands:
-		# 	print "    ", algebra.has_ints(e), e
-
 		exprs = var_expands + add_expands + mul_expands
-		models = [model.Model(e) for e in exprs]
+		models = [model.Model(e) for e in exprs if e != C]
 		for m in models:
-			m.parend_id = M.id
+			m.parent_id = M.id
 
 		return models
 

@@ -4,10 +4,6 @@ from sympy import *
 from sympy.strategies.tree import greedy, brute
 init_printing(use_unicode=True)
 
-
-x = symbols('x')
-print "x int ? ", x.is_Integer
-
 ## Filters on expressions
 ##
 ## TODO turn this into a filter which takes a list of functions
