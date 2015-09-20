@@ -65,10 +65,10 @@ class Model:
 	def __str__(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		return "{:5d}:  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:s}" \
-			.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
+		fs = "{:5d}:  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:s}"
+		return fs.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
 
-	def pretty_expr(self, float_format="%.3f"):
+	def pretty_expr(self, float_format="%.6f"):
 		c_sub = [ (str(c), float_format % self.params[str(c)].value) for c in self.cs ]
 		self.pretty = self.expr.subs(c_sub)
 		return self.pretty
@@ -86,7 +86,6 @@ class Model:
 				continue
 			i+=1
 		return i
-
 
 	def get_coeff(self):
 		if self.coeff is not None:

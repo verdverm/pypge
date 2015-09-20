@@ -41,6 +41,12 @@ Alternatively you can use conda to install the Python dependencies:
 
 planned, of primary concern
 
+
+### Things to know
+
+* When pretty printing, sympy performs simplification, which can remove terms if the floating point print precision is not sufficient (looks like __zero__)
+
+
 ### Contributing
 
 Branching practices follow the methodology outlined at: http://nvie.com/posts/a-successful-git-branching-model/

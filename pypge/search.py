@@ -6,7 +6,7 @@ import evaluate
 import numpy
 import sympy
 import lmfit
-from deap.tools import emo
+import select as emo
 from deap import base, creator
 
 import networkx as nx
