@@ -14,7 +14,6 @@ def gen_pts(xs_params, npts):
 		xs = np.random.uniform(low=xp[0],high=xp[1],size=npts)
 		pts.append(xs)
 	xpts = np.array(pts)
-	print "xpts: ", xpts.shape
 	return xpts
 
 def gen(name,eqn_str, xs, xs_params, npts, noise):

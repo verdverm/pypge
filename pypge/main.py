@@ -6,35 +6,28 @@ from benchmarks import explicit
 
 ###  TODOS
 #
-#
-# - clean up model class
-#   - move eval
-#   - rename things
-#   - sed S/expr/modl/
+# - use peek eval (others from 2nd paper)
+# - check states being set properly
 #
 # - diffeqs
-#   - models
-#   - evaluation RK4
-#   - benchmarks
+#   - datagen with RK4
+#   - numerical evaluation
+#   - benchmarks with point eval
 #
 #
-# - final processing & output(s)
-#   - mid process too?
 # - logging
 # - statistics
 #   - memotree
 #   - within model
 #   - for expansions
 #   - what's improving and not
-#   - subexpressions
-# - checkpointing & continuing a run
-# - peek eval (others from 2nd paper)
+#   - subexpressions#
 #
-#
-# - networkx
+# - networkx & relations for ...
 # - algebra
-#   - growing / filtering policies
+#   - growing / initing policies
 #   - simplification / expansions
+#   - filtering policies
 #   - +C ???
 #
 #
@@ -44,6 +37,12 @@ from benchmarks import explicit
 #   - get/set parameters
 #   - pipelining
 #   - gridsearch
+#
+#
+# - clean up model class
+#   - move eval
+#   - rename things
+#   - sed S/expr/modl/
 #
 #
 # - distributing to the cloud, pyspark
@@ -62,7 +61,7 @@ def main():
 	print "hello pypge!\n"
 
 	prob = explicit.Nguyen_12(0.1)
-	print prob['name'], prob['eqn']
+	print prob['name'] + ":  ", prob['eqn'], "\n"
 
 	pge = PGE(
 		system_type = "explicit",
@@ -70,7 +69,8 @@ def main():
 		usable_vars = prob['xs_str'],
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
-		max_iter = 8
+		peek_count = 9,
+		max_iter = 12
 		)
 
 	pge.fit(prob['xpts'], prob['ypts'])
