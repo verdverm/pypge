@@ -50,10 +50,10 @@ ax2.set_ylabel('omega')
 # Plot omega vs theta
 ax3 = fig.add_subplot(313)
 twopi = 2.0*np.pi
-ax3.plot(psoln[:,0]%twopi, psoln[:,1], '.', ms=1)
+ax3.plot(psoln[:,0]%twopi, psoln[:,1], '.')
 ax3.set_xlabel('theta')
 ax3.set_ylabel('omega')
 ax3.set_xlim(0., twopi)
 
-plt.tight_layout()
+# plt.tight_layout()
 plt.show()

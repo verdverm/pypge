@@ -6,14 +6,13 @@ from benchmarks import explicit
 
 ###  TODOS
 #
-# - use peek eval (others from 2nd paper)
-# - check states being set properly
-#
 # - diffeqs
 #   - datagen with RK4
 #   - numerical evaluation
 #   - benchmarks with point eval
 #
+#   - multiprocessing in python (multi-core)
+#   - timeit benchmarks
 #
 # - logging
 # - statistics
@@ -30,6 +29,8 @@ from benchmarks import explicit
 #   - filtering policies
 #   - +C ???
 #
+# - check states being set properly
+# - distributing to the cloud, pyspark
 #
 # - Ipython notebook examples
 # - scikit learn
@@ -38,14 +39,6 @@ from benchmarks import explicit
 #   - pipelining
 #   - gridsearch
 #
-#
-# - clean up model class
-#   - move eval
-#   - rename things
-#   - sed S/expr/modl/
-#
-#
-# - distributing to the cloud, pyspark
 #
 # - other system types
 #   - invarients
@@ -56,6 +49,10 @@ from benchmarks import explicit
 #   - when / where coefficients
 #   - domain alphabet
 #   - sub-expression frequencies in population
+#
+#
+#
+
 
 def main():
 	print "hello pypge!\n"
