@@ -6,7 +6,7 @@ import evaluate
 import numpy
 import sympy
 import lmfit
-import select as emo
+import selection as emo
 from deap import base, creator
 
 import networkx as nx
@@ -182,7 +182,7 @@ class PGE:
 			self.eval_models_multiprocess(to_eval, self.workers)
 		else:
 			self.eval_models(to_eval)
-			
+
 		self.eval_push_models(to_eval)
 
 
