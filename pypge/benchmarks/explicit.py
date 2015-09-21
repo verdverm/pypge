@@ -8,19 +8,17 @@ z = Symbol('z')
 v = Symbol('v')
 w = Symbol('w')
 
-def gen_pts(xs_params, npts):
+def gen_xpts(xs_params, npts):
 	pts = []
 	for xp in xs_params:
 		xs = np.random.uniform(low=xp[0],high=xp[1],size=npts)
 		pts.append(xs)
 	xpts = np.array(pts)
-	print "xpts: ", xpts.shape
 	return xpts
 
 def gen(name,eqn_str, xs, xs_params, npts, noise):
-	eqn_str = eqn_str
 	eqn = sympify(eqn_str)
-	xpts = gen_pts(xs_params, npts)
+	xpts = gen_xpts(xs_params, npts)
 	ypure = lambdify(xs,eqn,"numpy")(*xpts)
 	ypts = ypure + np.random.normal(0, noise, len(ypure))
 

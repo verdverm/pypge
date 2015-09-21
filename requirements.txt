@@ -13,6 +13,5 @@ lmfit
 deap
 
 matplotlib
-pygraphviz
 pydot
 

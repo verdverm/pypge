@@ -51,6 +51,9 @@ default_filters = [filter_has_int_coeff,filter_has_big_pow]
 def tree_size(eq):
 	i = 0
 	for e in preorder_traversal(eq):
+		if e.is_Pow:
+			B,E = e.as_base_exp()
+			i += abs(E) # cause it's going to be counted when it's 'e' itself
 		i+=1
 	return i
 
