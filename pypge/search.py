@@ -17,42 +17,6 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 
 
 
-# pool = mp.Pool(processes=2)
-
-
-def unwrap_self_peek_model(this, modl, pos):
-	passed = PGE.peek_model(this, modl)
-	if not passed:
-		return (pos, modl.error, modl.exception)
-	else:
-		vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
-		ret_data = {
-			'score': modl.score,
-			'r2': modl.r2,
-			'evar': modl.evar,
-			# 'fit': modl.fit_result,
-			'params': vals
-			# 'params': [v for v in vals ]
-		}
-		return (pos, None, ret_data)
-
-def unwrap_self_eval_model(this, modl, pos):
-	passed = PGE.eval_model(this, modl)
-	if not passed:
-		return (pos, modl.error, modl.exception)
-	else:
-		vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
-		ret_data = {
-			'score': modl.score,
-			'r2': modl.r2,
-			'evar': modl.evar,
-			# 'fit': modl.fit_result,
-			'params': vals
-			# 'params': [v for v in vals ]
-		}
-		return (pos, None, ret_data)
-
-
 def unwrap_self_peek_model_queue(this):
 	while True:
 		try:
@@ -478,24 +442,16 @@ class PGE:
 	def peek_models_multiprocess(self, models, processes):
 		print "  multi-peek'n:", len(models)
 
-		# pool = mp.Pool(processes=processes)
-		# results = [pool.apply_async(unwrap_self_peek_model, args=(self,m,i)) for i,m in enumerate(models)]
-		# results = [p.get() for p in results]
-		# results.sort()
-
 		for i,m in enumerate(models):
 			self.peek_in_queue.put( (i,m) )
 		
-		results = []
 		for i in range(len(models)):
-			val = self.peek_out_queue.get()
-			results.append(val)
-
-		for ret in results:
+			ret = self.peek_out_queue.get()
 			pos = ret[0]
 			err = ret[1]
 			dat = ret[2]
 			modl = models[ret[0]]
+
 			if err is not None:
 				modl.error = err
 				modl.exception = dat
@@ -505,6 +461,7 @@ class PGE:
 				modl.r2 = dat['r2']
 				modl.evar = dat['evar']
 				modl.peek_nfev = dat['nfev']
+				self.peek_nfev += m.peek_nfev
 
 				for v in dat['params']:
 					modl.params[v[0]].value = v[1]
@@ -576,25 +533,16 @@ class PGE:
 	def eval_models_multiprocess(self, models, processes):
 		print "  multi-eval'n:", len(models)
 
-		# pool = mp.Pool(processes=processes)
-		# results = [pool.apply_async(unwrap_self_eval_model, args=(self, m, i)) for i,m in enumerate(models)]
-		# results = [p.get() for p in results]
-		# results.sort()
-
 		for i,m in enumerate(models):
 			self.eval_in_queue.put( (i,m) )
 		
-		results = []
 		for i in range(len(models)):
-			val = self.eval_out_queue.get()
-			results.append(val)
-
-		
-		for ret in results:
+			ret = self.eval_out_queue.get()
 			pos = ret[0]
 			err = ret[1]
 			dat = ret[2]
 			modl = models[ret[0]]
+
 			if err is not None:
 				modl.error = err
 				modl.exception = dat
@@ -604,6 +552,7 @@ class PGE:
 				modl.r2 = dat['r2']
 				modl.evar = dat['evar']
 				modl.eval_nfev = dat['nfev']
+				self.eval_nfev += m.eval_nfev
 				
 				for v in dat['params']:
 					modl.params[v[0]].value = v[1]
@@ -651,11 +600,6 @@ class PGE:
 		modl.evaluated = True
 
 		return True # passed
-
-
-
-
-
 
 
 

@@ -11,9 +11,6 @@ from benchmarks import explicit
 #   - numerical evaluation
 #   - benchmarks with point eval
 #
-#   - multiprocessing in python (multi-core)
-#   - timeit benchmarks
-#
 # - logging
 # - statistics
 #   - memotree
