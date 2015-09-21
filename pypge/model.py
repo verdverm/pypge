@@ -53,6 +53,11 @@ class Model:
 		self.evar = None
 		self.fitness = None
 
+		self.fit_result = None
+		self.peek_nfev = 0
+		self.eval_nfev = 0
+		self.total_fev = 0
+
 		self.inited = True
 
 

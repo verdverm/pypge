@@ -53,6 +53,59 @@ def unwrap_self_eval_model(this, modl, pos):
 		return (pos, None, ret_data)
 
 
+def unwrap_self_peek_model_queue(this):
+	while True:
+		try:
+			val = this.peek_in_queue.get()
+			if val is None:
+				break;
+			pos = val[0]
+			modl = val[1]
+
+			passed = PGE.peek_model(this, modl)
+			if not passed:
+				this.peek_out_queue.send( (pos, modl.error, modl.exception) )
+			else:
+				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+				ret_data = {
+					'score': modl.score,
+					'r2': modl.r2,
+					'evar': modl.evar,
+					'params': vals,
+					'nfev': modl.fit_result.nfev
+				}
+				this.peek_out_queue.put( (pos, None, ret_data) )
+		except Exception, e:
+			print "breaking!", e
+			break
+
+def unwrap_self_eval_model_queue(this):
+	while True:
+		try:
+			val = this.eval_in_queue.get()
+			if val is None:
+				break;
+			pos = val[0]
+			modl = val[1]
+
+			passed = PGE.eval_model(this, modl)
+			if not passed:
+				this.eval_out_queue.send( (pos, modl.error, modl.exception) )
+			else:
+				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+				ret_data = {
+					'score': modl.score,
+					'r2': modl.r2,
+					'evar': modl.evar,
+					'params': vals,
+					'nfev': modl.fit_result.nfev
+				}
+				this.eval_out_queue.put( (pos, None, ret_data) )
+		except Exception, e:
+			print "breaking!", e
+			break
+
+
 class PGE:
 	
 	def __init__(self,**kwargs):
@@ -78,6 +131,10 @@ class PGE:
 		self.usable_vars = None
 		self.usable_funcs = None
 
+		# number of function evaluations 
+		self.peek_nfev = 0 # mul by peek_npts
+		self.eval_nfev = 0
+
 		# override with kwargs
 		for key, value in kwargs.items():
 			# print key, value
@@ -92,6 +149,13 @@ class PGE:
 			return
 
 		# evaluation pools
+		self.peek_in_queue = mp.Queue(256)
+		self.peek_out_queue = mp.Queue(256)
+		self.peek_procs = [mp.Process(target=unwrap_self_peek_model_queue, args=(self,) ) for i in range(self.workers)]
+
+		self.eval_in_queue = mp.Queue(256)
+		self.eval_out_queue = mp.Queue(256)
+		self.eval_procs = [mp.Process(target=unwrap_self_eval_model_queue, args=(self,) ) for i in range(self.workers)]
 
 		# memoizer & grower
 		self.memoizer = memoize.Memoizer(self.vars)
@@ -151,9 +215,10 @@ class PGE:
 		# set training data 
 		self.X_train = X_train
 		self.Y_train = Y_train
+		self.eval_npts = len(self.Y_train)
 
 		# set peeking data
-		pos = numpy.random.randint(0,len(Y_train), self.peek_npts)
+		pos = numpy.random.randint(0,self.eval_npts, self.peek_npts)
 		self.X_peek = self.X_train[:,pos]
 		self.Y_peek = self.Y_train[pos]
 
@@ -164,6 +229,12 @@ class PGE:
 	def preloop(self):
 		# preloop setup (generates,evals,queues first models)
 		print "Preloop setup"
+
+		for proc in self.peek_procs:
+			proc.start()
+		for proc in self.eval_procs:
+			proc.start()
+
 
 		self.first_exprs = self.grower.first_exprs()
 		self.iter_expands.append(self.first_exprs)
@@ -250,6 +321,11 @@ class PGE:
 			for m in front:
 				print "  ", m
 			print ""
+
+		print "\n"
+		print "num peek evals:  ", self.peek_nfev, self.peek_nfev * self.peek_npts
+		print "num eval evals:  ", self.eval_nfev, self.eval_nfev * self.eval_npts
+		print "num total evals: ", self.peek_nfev * self.peek_npts + self.eval_nfev * self.eval_npts
 		
 		print "\n\n", nx.info(self.graph), "\n\n"
 
@@ -260,6 +336,18 @@ class PGE:
 				del_n.append(n)
 		for n in del_n:
 			self.graph.remove_node(n)
+
+		print "\n\nstopping workers"
+
+		for proc in self.peek_procs:
+			self.peek_in_queue.put(None)
+		for proc in self.eval_procs:
+			self.eval_in_queue.put(None)
+
+		for proc in self.peek_procs:
+			proc.join()
+		for proc in self.eval_procs:
+			proc.join()
 
 		print "\n\ndone\n\n"
 					
@@ -384,15 +472,24 @@ class PGE:
 			if not passed or m.error is not None:
 				print m.error, m.exception
 				continue
-			self.peek_push(m)
+			m.peek_nfev = m.fit_result.nfev
+			self.peek_nfev += m.peek_nfev
 
 	def peek_models_multiprocess(self, models, processes):
 		print "  multi-peek'n:", len(models)
 
-		pool = mp.Pool(processes=processes)
-		results = [pool.apply_async(unwrap_self_peek_model, args=(self,m,i)) for i,m in enumerate(models)]
-		results = [p.get() for p in results]
-		results.sort()
+		# pool = mp.Pool(processes=processes)
+		# results = [pool.apply_async(unwrap_self_peek_model, args=(self,m,i)) for i,m in enumerate(models)]
+		# results = [p.get() for p in results]
+		# results.sort()
+
+		for i,m in enumerate(models):
+			self.peek_in_queue.put( (i,m) )
+		
+		results = []
+		for i in range(len(models)):
+			val = self.peek_out_queue.get()
+			results.append(val)
 
 		for ret in results:
 			pos = ret[0]
@@ -407,12 +504,14 @@ class PGE:
 				modl.score = dat['score']
 				modl.r2 = dat['r2']
 				modl.evar = dat['evar']
-				modl.peek_score = dat['score']
-				modl.peek_r2 = dat['r2']
-				modl.peek_evar = dat['evar']
+				modl.peek_nfev = dat['nfev']
 
 				for v in dat['params']:
 					modl.params[v[0]].value = v[1]
+
+				modl.peek_score = dat['score']
+				modl.peek_r2 = dat['r2']
+				modl.peek_evar = dat['evar']
 				
 				# build the fitness for selection
 				vals = (modl.size(), modl.score)
@@ -471,14 +570,25 @@ class PGE:
 			if not passed or m.error is not None:
 				print m.error, m.exception
 				continue
+			m.eval_nfev = m.fit_result.nfev
+			self.eval_nfev += m.eval_nfev
 
 	def eval_models_multiprocess(self, models, processes):
 		print "  multi-eval'n:", len(models)
 
-		pool = mp.Pool(processes=processes)
-		results = [pool.apply_async(unwrap_self_eval_model, args=(self, m, i)) for i,m in enumerate(models)]
-		results = [p.get() for p in results]
-		results.sort()
+		# pool = mp.Pool(processes=processes)
+		# results = [pool.apply_async(unwrap_self_eval_model, args=(self, m, i)) for i,m in enumerate(models)]
+		# results = [p.get() for p in results]
+		# results.sort()
+
+		for i,m in enumerate(models):
+			self.eval_in_queue.put( (i,m) )
+		
+		results = []
+		for i in range(len(models)):
+			val = self.eval_out_queue.get()
+			results.append(val)
+
 		
 		for ret in results:
 			pos = ret[0]
@@ -493,6 +603,7 @@ class PGE:
 				modl.score = dat['score']
 				modl.r2 = dat['r2']
 				modl.evar = dat['evar']
+				modl.eval_nfev = dat['nfev']
 				
 				for v in dat['params']:
 					modl.params[v[0]].value = v[1]
