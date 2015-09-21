@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'pypge',
   packages = find_packages(), # this must be the same as the name above
-  version = '0.4',
+  version = '0.5',
   description = 'Prioritized Grammar Enumeration implementation',
   author = 'Tony Worm',
   author_email = 'verdverm@gmial.com',
