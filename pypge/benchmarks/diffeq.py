@@ -123,10 +123,10 @@ def ChaoticPendulum(**kwargs):
 
 
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # stuff = SimplePendulum(params={'M':0.2})
-# stuff = ChaoticPendulum()
+stuff = ChaoticPendulum()
 
 
 # t_pts = stuff['time_pts']
@@ -158,43 +158,43 @@ import matplotlib.pyplot as plt
 
 # this matches the output of the chaotic_pendulum.py
 #   however it contains physical unrealities
-ps = {
-	"M": 1.0,
-	"R": 1.0,
-	"g": -1.0, # THIS IS BOGUS
-	"a": 1.5,
-	"b": 0.5,
-	"k": 0.65
-}
-stuff = ChaoticPendulum(time_end=200.0, time_step=0.05, params=ps)
+# ps = {
+# 	"M": 1.0,
+# 	"R": 1.0,
+# 	"g": -1.0, # THIS IS BOGUS
+# 	"a": 1.5,
+# 	"b": 0.5,
+# 	"k": 0.65
+# }
+# stuff = ChaoticPendulum(time_end=200.0, time_step=0.05, params=ps)
 
 
-t_pts = stuff['time_pts']
-x_pts = stuff['xs_pure']
+# t_pts = stuff['time_pts']
+# x_pts = stuff['xs_pure']
 
-fig = plt.figure(1, figsize=(8,8))
+# fig = plt.figure(1, figsize=(8,8))
 
-# Plot velocity as a function of time
-ax1 = fig.add_subplot(311)
-ax1.plot(t_pts, x_pts[0])
-ax1.set_xlabel('time')
-ax1.set_ylabel('velocity')
+# # Plot velocity as a function of time
+# ax1 = fig.add_subplot(311)
+# ax1.plot(t_pts, x_pts[0])
+# ax1.set_xlabel('time')
+# ax1.set_ylabel('velocity')
 
-# Plot angle as a function of time
-ax2 = fig.add_subplot(312)
-ax2.plot(t_pts, x_pts[1])
-ax2.set_xlabel('time')
-ax2.set_ylabel('angle')
+# # Plot angle as a function of time
+# ax2 = fig.add_subplot(312)
+# ax2.plot(t_pts, x_pts[1])
+# ax2.set_xlabel('time')
+# ax2.set_ylabel('angle')
 
-# Plot velocity vs angle
-ax3 = fig.add_subplot(313)
-twopi = 2.0*np.pi
-ax3.plot(x_pts[0]%twopi, x_pts[1], '.', ms=3)
-ax3.set_xlabel('velocity')
-ax3.set_ylabel('angle')
-ax3.set_xlim(0., twopi)
+# # Plot velocity vs angle
+# ax3 = fig.add_subplot(313)
+# twopi = 2.0*np.pi
+# ax3.plot(x_pts[0]%twopi, x_pts[1], '.', ms=3)
+# ax3.set_xlabel('velocity')
+# ax3.set_ylabel('angle')
+# ax3.set_xlim(0., twopi)
 
-plt.show()
+# plt.show()
 
 
 

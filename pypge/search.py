@@ -10,14 +10,54 @@ import select as emo
 from deap import base, creator
 
 import networkx as nx
+import multiprocessing as mp
 
 numpy.random.seed(23)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
+
+
+
+# pool = mp.Pool(processes=2)
+
+
+def unwrap_self_peek_model(this, modl, pos):
+	passed = PGE.peek_model(this, modl)
+	if not passed:
+		return (pos, modl.error, modl.exception)
+	else:
+		vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+		ret_data = {
+			'score': modl.score,
+			'r2': modl.r2,
+			'evar': modl.evar,
+			# 'fit': modl.fit_result,
+			'params': vals
+			# 'params': [v for v in vals ]
+		}
+		return (pos, None, ret_data)
+
+def unwrap_self_eval_model(this, modl, pos):
+	passed = PGE.eval_model(this, modl)
+	if not passed:
+		return (pos, modl.error, modl.exception)
+	else:
+		vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+		ret_data = {
+			'score': modl.score,
+			'r2': modl.r2,
+			'evar': modl.evar,
+			# 'fit': modl.fit_result,
+			'params': vals
+			# 'params': [v for v in vals ]
+		}
+		return (pos, None, ret_data)
+
 
 class PGE:
 	
 	def __init__(self,**kwargs):
 		# default values
+		self.workers = 1
 		self.max_iter = 100
 		self.pop_count = 3
 		self.peek_count = 2*self.pop_count
@@ -50,6 +90,8 @@ class PGE:
 		if not self.check_config():
 			print "ERROR: config missing values"
 			return
+
+		# evaluation pools
 
 		# memoizer & grower
 		self.memoizer = memoize.Memoizer(self.vars)
@@ -128,12 +170,19 @@ class PGE:
 
 		to_peek = self.memoize_models(self.first_exprs)
 
-		self.peek_models(to_peek)
-		self.peek_push_models(to_peek)
+		if self.workers > 1:
+			self.peek_models_multiprocess(to_peek, self.workers)
+		else:
+			self.peek_models(to_peek)
 
+		self.peek_push_models(to_peek)
 		to_eval = self.peek_pop() + self.peek_pop() # twice the first time
 
-		self.eval_models(to_eval)
+		if self.workers > 1:
+			self.eval_models_multiprocess(to_eval, self.workers)
+		else:
+			self.eval_models(to_eval)
+			
 		self.eval_push_models(to_eval)
 
 
@@ -149,14 +198,20 @@ class PGE:
 
 			to_peek = self.memoize_models(expanded)
 
-			self.peek_models(to_peek)
-			self.peek_push_models(to_peek)
+			if self.workers > 1:
+				self.peek_models_multiprocess(to_peek, self.workers)
+			else:
+				self.peek_models(to_peek)
 
+			self.peek_push_models(to_peek)
 			to_eval = self.peek_pop()
 				
-			self.eval_models(to_eval)
-			self.eval_push_models(to_eval)
+			if self.workers > 1:
+				self.eval_models_multiprocess(to_eval, self.workers)
+			else:
+				self.eval_models(to_eval)
 
+			self.eval_push_models(to_eval)
 			self.print_best(24)
 
 
@@ -331,6 +386,41 @@ class PGE:
 				continue
 			self.peek_push(m)
 
+	def peek_models_multiprocess(self, models, processes):
+		print "  multi-peek'n:", len(models)
+
+		pool = mp.Pool(processes=processes)
+		results = [pool.apply_async(unwrap_self_peek_model, args=(self,m,i)) for i,m in enumerate(models)]
+		results = [p.get() for p in results]
+		results.sort()
+
+		for ret in results:
+			pos = ret[0]
+			err = ret[1]
+			dat = ret[2]
+			modl = models[ret[0]]
+			if err is not None:
+				modl.error = err
+				modl.exception = dat
+				modl.errored = True
+			else:
+				modl.score = dat['score']
+				modl.r2 = dat['r2']
+				modl.evar = dat['evar']
+				modl.peek_score = dat['score']
+				modl.peek_r2 = dat['r2']
+				modl.peek_evar = dat['evar']
+
+				for v in dat['params']:
+					modl.params[v[0]].value = v[1]
+				
+				# build the fitness for selection
+				vals = (modl.size(), modl.score)
+				modl.fitness = creator.FitnessMin()
+				modl.fitness.setValues( vals )
+				modl.evaluated = True
+
+
 	def peek_model(self, modl):
 		# fit the modl
 		evaluate.Fit(modl, self.vars, self.X_peek, self.Y_peek)
@@ -375,11 +465,44 @@ class PGE:
 
 	def eval_models(self, models):
 		print "  eval'n:", len(models)
+
 		for m in models:
 			passed = self.eval_model(m)
 			if not passed or m.error is not None:
 				print m.error, m.exception
 				continue
+
+	def eval_models_multiprocess(self, models, processes):
+		print "  multi-eval'n:", len(models)
+
+		pool = mp.Pool(processes=processes)
+		results = [pool.apply_async(unwrap_self_eval_model, args=(self, m, i)) for i,m in enumerate(models)]
+		results = [p.get() for p in results]
+		results.sort()
+		
+		for ret in results:
+			pos = ret[0]
+			err = ret[1]
+			dat = ret[2]
+			modl = models[ret[0]]
+			if err is not None:
+				modl.error = err
+				modl.exception = dat
+				modl.errored = True
+			else:
+				modl.score = dat['score']
+				modl.r2 = dat['r2']
+				modl.evar = dat['evar']
+				
+				for v in dat['params']:
+					modl.params[v[0]].value = v[1]
+
+				# build the fitness for selection
+				vals = (modl.size(), modl.score)
+				modl.fitness = creator.FitnessMin()
+				modl.fitness.setValues( vals )
+				modl.evaluated = True
+
 
 	def eval_model(self, modl):
 		# fit the modl
