@@ -1,6 +1,18 @@
 import search
 
+## We ~can~ parallelize the following stages
+#
+#  + evaluation
+#  ? expansion
+#  ? algebra
+#
+#  '+' means it showed improvement
+#  '-' means it showed loss
+#  '?' means we don't know yet
+#
 
+
+## PEEK EVALUATION MULTIPROCESSING
 def unwrap_self_peek_model_queue(pge_instance):
 	while True:
 		try:
@@ -27,6 +39,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 			print "breaking!", e
 			break
 
+## FULL EVALUATION MULTIPROCESSING
 def unwrap_self_eval_model_queue(pge_instance):
 	while True:
 		try:

@@ -5,7 +5,7 @@ init_printing(use_unicode=True)
 
 from itertools import combinations, combinations_with_replacement as combos
 
-import algebra
+import filters
 import model
 
 BASIC_BASE = (exp, cos, sin)
@@ -15,8 +15,6 @@ HYPER_TRIG = (cosh, sinh, tanh)
 
 C = symbols('C')
 
-
-## Needs some negative powers
 
 class Grower:
 
@@ -79,9 +77,9 @@ class Grower:
 		add_expands = self._add_extend(M.orig)
 		mul_expands = self._mul_extend(M.orig)
 
-		var_expands = algebra.filter_expr_list(var_expands, algebra.default_filters)
-		add_expands = algebra.filter_expr_list(add_expands, algebra.default_filters)
-		mul_expands = algebra.filter_expr_list(mul_expands, algebra.default_filters)
+		var_expands = filters.filter_expr_list(var_expands, filters.default_filters)
+		add_expands = filters.filter_expr_list(add_expands, filters.default_filters)
+		mul_expands = filters.filter_expr_list(mul_expands, filters.default_filters)
 
 		exprs = var_expands + add_expands + mul_expands
 		models = [model.Model(e) for e in exprs if e != C]

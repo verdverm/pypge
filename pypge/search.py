@@ -72,7 +72,7 @@ class PGE:
 		self.final = []
 		self.final_paretos = None
 
-		# Root node for the graph
+		# Root node for the GRAPH
 		r = sympy.Symbol("root")
 		self.root_model = model.Model(r)
 		R = self.root_model
@@ -84,8 +84,8 @@ class PGE:
 		# Relationship Graph
 		self.iter_expands = []
 		self.iter_expands.append([R])
-		self.graph = nx.MultiDiGraph()
-		self.graph.add_node(R, modl=R)
+		self.GRAPH = nx.MultiDiGraph()
+		self.GRAPH.add_node(R, modl=R)
 
 
 		# multiprocessing stuff
@@ -263,15 +263,15 @@ class PGE:
 		print "num eval evals:  ", self.eval_nfev, self.eval_nfev * self.eval_npts
 		print "num total evals: ", self.peek_nfev * self.peek_npts + self.eval_nfev * self.eval_npts
 		
-		print "\n\n", nx.info(self.graph), "\n\n"
+		print "\n\n", nx.info(self.GRAPH), "\n\n"
 
 		# handle issue with extra stray node with parent_id == -2 (at end of nodes list)
 		del_n = []
-		for n in nx.nodes_iter(self.graph):
+		for n in nx.nodes_iter(self.GRAPH):
 			if n.score is None:
 				del_n.append(n)
 		for n in del_n:
-			self.graph.remove_node(n)
+			self.GRAPH.remove_node(n)
 
 		print "\n\nstopping workers"
 
@@ -324,7 +324,7 @@ class PGE:
 			found, f_modl = self.memoizer.lookup(m)
 			if found:
 				p = self.memoizer.get_by_id(m.parent_id)
-				self.graph.add_edge(p, m, relation="ex_dupd")
+				self.GRAPH.add_edge(p, m, relation="ex_dupd")
 				continue
 
 			if self.memoizer.insert(m):
@@ -333,8 +333,8 @@ class PGE:
 				unique.append(m)
 				# add node and edge
 				p = self.memoizer.get_by_id(m.parent_id)
-				self.graph.add_node(m, modl=m)
-				self.graph.add_edge(p, m, relation="expanded")
+				self.GRAPH.add_node(m, modl=m)
+				self.GRAPH.add_edge(p, m, relation="expanded")
 
 		print "  unique:", len(unique)
 		return unique

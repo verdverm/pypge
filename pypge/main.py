@@ -28,15 +28,16 @@ from benchmarks import explicit
 #   - what's improving and not
 #   - subexpressions#
 #
-# - run on the GPU with theano
-# - distributing to the cloud, pyspark
-#
 # - Ipython notebook examples
 # - scikit learn
 #   - pandas DFs
 #   - get/set parameters
 #   - pipelining
 #   - gridsearch
+#
+# - run on the GPU with theano
+# - distributing to the cloud, pyspark
+#
 #
 #
 # - diffeqs

@@ -30,6 +30,7 @@ class Model:
 		self.expanded = False
 		self.finalized = False
 
+		# error accounting
 		self.errored = False
 		self.error = None
 		self.exception = None
@@ -60,6 +61,9 @@ class Model:
 		self.eval_nfev = 0
 		self.total_fev = 0
 
+
+
+		# all done, so we be inited
 		self.inited = True
 
 
