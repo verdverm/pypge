@@ -133,6 +133,7 @@ class PGE:
 
 		# list of all finalized models
 		self.final = []
+		self.final_paretos = None
 
 		# Root node for the graph
 		r = sympy.Symbol("root")
@@ -315,7 +316,14 @@ class PGE:
 
 		print "\n\ndone\n\n"
 					
+	def get_final_paretos(self):
+		# pull all non-expanded models in queue out and push into final
+		# could also use spea2_list here, they should have same contents
+		final = self.final + self.nsga2_list 
 
+		# generate final pareto fronts
+		final_list = emo.sortLogNondominated(final, len(final))
+		return final_list
 
 	def memoize_models(self, models):
 		print "  memoizing:", len(models)

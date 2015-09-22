@@ -6,10 +6,18 @@ from benchmarks import explicit
 
 ###  TODOS
 #
-# - diffeqs
-#   - datagen with RK4
-#   - numerical evaluation
-#   - benchmarks with point eval
+#   objective 1. Pull method for expression generation
+#   objective 2. Use more graph & algebra et all... 
+#   objective 3. Build in stats & logging while dev'n previous 2
+#
+# - networkx & relations for ...
+#   - plot geneology on pareto fronts
+#
+# - algebra
+#   - growing / initing policies
+#   - simplification / expansions
+#   - filtering policies
+#   - +C ???
 #
 # - logging
 # - statistics
@@ -18,13 +26,6 @@ from benchmarks import explicit
 #   - for expansions
 #   - what's improving and not
 #   - subexpressions#
-#
-# - networkx & relations for ...
-# - algebra
-#   - growing / initing policies
-#   - simplification / expansions
-#   - filtering policies
-#   - +C ???
 #
 # - check states being set properly
 # - distributing to the cloud, pyspark
@@ -36,6 +37,10 @@ from benchmarks import explicit
 #   - pipelining
 #   - gridsearch
 #
+#
+# - diffeqs
+#   - problems with default parameters
+#   - need to toggle on system type ???
 #
 # - other system types
 #   - invarients
@@ -64,8 +69,8 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 12,
-		workers = 4
+		max_iter = 8,
+		workers = 2
 		)
 
 	pge.fit(prob['xpts'], prob['ypts'])

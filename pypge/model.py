@@ -4,6 +4,8 @@ CS = [sympy.Symbol("C_"+str(i)) for i in range(8)]
 
 from lmfit import Parameters
 
+import evaluate
+
 class Model:
 
 	def __init__(self, expr, xs=None, cs=None):
@@ -126,4 +128,7 @@ class Model:
 			args = tuple(args)
 			ret = expr.func(*args)
 		return ret,ii
+
+	def predict(self, model, xs, x_pts):
+		return evaluate.Eval(model, xs, x_pts)
 
