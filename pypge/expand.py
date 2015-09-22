@@ -66,6 +66,7 @@ class Grower:
 
 		models = [model.Model(e) for e in ret_exprs]
 		for m in models:
+			m.gen_relation = "first_gen"
 			m.parent_id = -1
 
 		return models
@@ -81,11 +82,11 @@ class Grower:
 		add_expands = filters.filter_expr_list(add_expands, filters.default_filters)
 		mul_expands = filters.filter_expr_list(mul_expands, filters.default_filters)
 
-		exprs = var_expands + add_expands + mul_expands
-		models = [model.Model(e) for e in exprs if e != C]
-		for m in models:
-			m.parent_id = M.id
+		var_models = [model.Model(e, p_id=M.id, reln="var_subs") for e in var_expands if e != C]
+		add_models = [model.Model(e, p_id=M.id, reln="add_xpnd") for e in add_expands if e != C]
+		mul_models = [model.Model(e, p_id=M.id, reln="mul_xpnd") for e in mul_expands if e != C]
 
+		models = var_models + add_models + mul_models
 		return models
 
 

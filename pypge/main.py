@@ -71,7 +71,7 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 8,
+		max_iter = 4,
 		workers = 2
 		)
 

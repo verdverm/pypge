@@ -8,14 +8,14 @@ import evaluate
 
 class Model:
 
-	def __init__(self, expr, xs=None, cs=None):
+	def __init__(self, expr, xs=None, cs=None, p_id=-2, reln="unknown"):
 		# Identification please
 		self.id = -2
 		self.iter_id = -2
 
 		# Family tree
-		self.parent_id = -2
-		self.gen_method = None
+		self.parent_id = p_id
+		self.gen_relation = reln
 		
 		# Possible states for a model (in order)
 		self.inited = False

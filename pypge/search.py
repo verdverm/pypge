@@ -85,7 +85,7 @@ class PGE:
 		self.iter_expands = []
 		self.iter_expands.append([R])
 		self.GRAPH = nx.MultiDiGraph()
-		self.GRAPH.add_node(R, modl=R)
+		self.GRAPH.add_node(R.id, modl=R)
 
 
 		# multiprocessing stuff
@@ -268,7 +268,8 @@ class PGE:
 		# handle issue with extra stray node with parent_id == -2 (at end of nodes list)
 		del_n = []
 		for n in nx.nodes_iter(self.GRAPH):
-			if n.score is None:
+			modl = self.memoizer.get_by_id(n)
+			if modl.score is None:
 				del_n.append(n)
 		for n in del_n:
 			self.GRAPH.remove_node(n)
@@ -315,6 +316,7 @@ class PGE:
 		return expanded
 
 	def filter_models(self, models):
+		print "  filtering:", len(models)
 		return models
 
 	def memoize_models(self, models):
@@ -323,23 +325,22 @@ class PGE:
 		for m in models:
 			found, f_modl = self.memoizer.lookup(m)
 			if found:
-				p = self.memoizer.get_by_id(m.parent_id)
-				self.GRAPH.add_edge(p, m, relation="ex_dupd")
-				continue
+				self.GRAPH.add_edge(m.parent_id, f_modl.id, relation=m.gen_relation)
 
-			if self.memoizer.insert(m):
+			did_ins = self.memoizer.insert(m)
+			if did_ins:
 				m.memoized = True
 				m.rewrite_coeff()
 				unique.append(m)
 				# add node and edge
-				p = self.memoizer.get_by_id(m.parent_id)
-				self.GRAPH.add_node(m, modl=m)
-				self.GRAPH.add_edge(p, m, relation="expanded")
+				self.GRAPH.add_node(m.id, modl=m)
+				self.GRAPH.add_edge(m.parent_id, m.id, relation=m.gen_relation)
 
-		print "  unique:", len(unique)
+		print "  unique:", len(unique),"/",len(models)
 		return unique
 
 	def algebra_models(self, models):
+		print "  algebra:", len(models)
 		for modl in models:
 			modl.algebrad = True
 		return models

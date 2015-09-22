@@ -1,4 +1,4 @@
-from sympy import preorder_traversal
+from sympy import preorder_traversal, numbers
 
 ## Filters on expressions
 ##
