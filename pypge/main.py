@@ -2,13 +2,14 @@ from search import PGE
 
 import expand
 
-from benchmarks import explicit
+from benchmarks import explicit 
 
 ###  TODOS
 #
 #   objective 1. Pull method for expression generation
 #   objective 2. Use more graph & algebra et all... 
 #   objective 3. Build in stats & logging while dev'n previous 2
+#
 #
 # - networkx & relations for ...
 #   - plot geneology on pareto fronts
@@ -27,7 +28,7 @@ from benchmarks import explicit
 #   - what's improving and not
 #   - subexpressions#
 #
-# - check states being set properly
+# - run on the GPU with theano
 # - distributing to the cloud, pyspark
 #
 # - Ipython notebook examples
