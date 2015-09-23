@@ -14,6 +14,7 @@ import search
 
 ## PEEK EVALUATION MULTIPROCESSING
 def unwrap_self_peek_model_queue(pge_instance):
+	pos, modl = -1, None
 	while True:
 		try:
 			val = pge_instance.peek_in_queue.get()
@@ -24,7 +25,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 
 			passed = search.PGE.peek_model(pge_instance, modl)
 			if not passed:
-				pge_instance.peek_out_queue.send( (pos, modl.error, modl.exception) )
+				pge_instance.peek_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
 				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
 				ret_data = {
@@ -36,7 +37,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 				}
 				pge_instance.peek_out_queue.put( (pos, None, ret_data) )
 		except Exception, e:
-			print "breaking!", e
+			print "breaking!", e, "\n  ", pos, modl.expr
 			break
 
 ## FULL EVALUATION MULTIPROCESSING
@@ -51,7 +52,7 @@ def unwrap_self_eval_model_queue(pge_instance):
 
 			passed = search.PGE.eval_model(pge_instance, modl)
 			if not passed:
-				pge_instance.eval_out_queue.send( (pos, modl.error, modl.exception) )
+				pge_instance.eval_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
 				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
 				ret_data = {
@@ -63,5 +64,5 @@ def unwrap_self_eval_model_queue(pge_instance):
 				}
 				pge_instance.eval_out_queue.put( (pos, None, ret_data) )
 		except Exception, e:
-			print "breaking!", e
+			print "breaking!", e, "\n  ", pos, modl.expr
 			break

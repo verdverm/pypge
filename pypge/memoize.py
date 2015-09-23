@@ -1,5 +1,5 @@
-from sympy import *
-init_printing(use_unicode=True)
+import sympy
+sympy.init_printing(use_unicode=True)
 
 
 class Memoizer:
@@ -33,7 +33,7 @@ class Memoizer:
 		# print expr
 		iis = []
 		ffs = []
-		for i,e in enumerate(preorder_traversal(expr)):
+		for i,e in enumerate(sympy.preorder_traversal(expr)):
 			# print i, e.func
 			ii, ff = self.mapper.get(e)
 			iis = iis + ii
@@ -51,7 +51,7 @@ class Mapper:
 
 	def __init__(self, variables):
 		self.variables = variables
-		self.coeffs = symbols("C C_0:16")
+		self.coeffs = sympy.symbols("C C_0:16")
 		self.map = {
 			## the Leaf types
 
@@ -63,24 +63,24 @@ class Mapper:
 			# Variable 'X_#': 5
 			# Derivative 'dX_#': 6
 
-			numbers.NegativeOne: 7,
+			sympy.numbers.NegativeOne: 7,
 
 
 			## the Node types
 			
 			# Mul: 8,  ++ num children
 			# Add: 9,  ++ num children
-			Pow: 10,
+			sympy.Pow: 10,
 			# Div: 11,
 
-			Abs: 12,
-			sqrt: 13,
-			log: 14,
-			exp: 15,
+			sympy.Abs: 12,
+			sympy.sqrt: 13,
+			sympy.log: 14,
+			sympy.exp: 15,
 
-			cos: 16,
-			sin: 17,
-			tan: 18,
+			sympy.cos: 16,
+			sympy.sin: 17,
+			sympy.tan: 18,
 			
 		}
 		# print self.variables
@@ -89,18 +89,18 @@ class Mapper:
 	def get(self,expr):
 		e = expr.func
 		
-		if e is Mul:
+		if e is sympy.Mul:
 			return [8,len(expr.args)], None
-		if e is Add:
+		if e is sympy.Add:
 			return [9,len(expr.args)], None
 		
-		if e is Symbol:
+		if e is sympy.Symbol:
 			return self.map_symbol(expr), None
 
-		if e is Integer or e is numbers.Zero or e is numbers.One:
+		if e is sympy.Integer or e is sympy.numbers.Zero or e is sympy.numbers.One:
 			return [2, int(expr.evalf(0))], None
 
-		if e is Float or e is numbers.Pi:
+		if e is sympy.Float or e is sympy.numbers.Pi:
 			return [2], [expr.evalf(8)]
 		
 		ii = [self.map[e]]

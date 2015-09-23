@@ -37,14 +37,15 @@ class Model:
 
 		# expression variations
 		self.orig = expr
-		self.expr = None
+		self.expr = expr
 		self.pretty = None
 
 		# vars, coeff, params
-		self.xs = None
-		self.cs = None
+		self.xs = xs
+		self.cs = cs
 		self.params = None
-		self.rewrite_coeff()
+		if self.cs is None:
+			self.rewrite_coeff()
 
 		# fitness metrics
 		self.sz = 0
@@ -105,6 +106,10 @@ class Model:
 			self.coeff = self.rewrite_coeff()
 
 	def rewrite_coeff(self):
+		if self.cs is not None:
+			c_subs = [ (c, C) for c in CS]
+			self.orig = self.expr.subs(c_subs)
+
 		expr, ii = self._rewrite_coeff_helper(self.orig, 0)
 		self.expr = expr
 		self.cs = CS[:ii]

@@ -1,19 +1,19 @@
 from __future__ import division
 
-from sympy import *
-init_printing(use_unicode=True)
+import sympy
+sympy.init_printing(use_unicode=True)
 
 from itertools import combinations, combinations_with_replacement as combos
 
 import filters
 import model
 
-BASIC_BASE = (exp, cos, sin)
-BASIC_MISC = (Abs, sqrt, log, exp)
-BASIC_TRIG = (cos, sin, tan)
-HYPER_TRIG = (cosh, sinh, tanh)
+BASIC_BASE = (sympy.exp, sympy.cos, sympy.sin)
+BASIC_MISC = (sympy.Abs, sympy.sqrt, sympy.log, sympy.exp)
+BASIC_TRIG = (sympy.cos, sympy.sin, sympy.tan)
+HYPER_TRIG = (sympy.cosh, sympy.sinh, sympy.tanh)
 
-C = symbols('C')
+C = sympy.symbols('C')
 
 
 class Grower:
@@ -21,7 +21,7 @@ class Grower:
 	def __init__(self,xs, funcs):
 	
 		# if only one variable, turn into list
-		if type(xs) is Symbol:
+		if type(xs) is sympy.Symbol:
 			xs = [xs]
 	
 		self.xs = xs
@@ -59,12 +59,12 @@ class Grower:
 		func_exprs = self.lin_funcs
 
 		mid_exprs = self.solo_muls + mul_exprs + func_exprs
-		add_exprs = [ Add( tpl[0], tpl[1], evaluate=False ) for tpl in combinations(mid_exprs, 2)]
-		plus_C_exprs = [ Add( expr, C ) for expr in mid_exprs + add_exprs]
+		add_exprs = [ sympy.Add( tpl[0], tpl[1], evaluate=False ) for tpl in combinations(mid_exprs, 2)]
+		plus_C_exprs = [ sympy.Add( expr, C ) for expr in mid_exprs + add_exprs]
 
 		ret_exprs = mid_exprs + add_exprs + plus_C_exprs
 
-		models = [model.Model(e) for e in ret_exprs]
+		models = [model.Model(e, xs=self.xs) for e in ret_exprs]
 		for m in models:
 			m.gen_relation = "first_gen"
 			m.parent_id = -1
@@ -73,16 +73,11 @@ class Grower:
 
 
 	def grow(self, M):
-
 		var_expands = self._var_sub(M.orig)
 		add_expands = self._add_extend(M.orig)
 		mul_expands = self._mul_extend(M.orig)
 
-		var_expands = filters.filter_expr_list(var_expands, filters.default_filters)
-		add_expands = filters.filter_expr_list(add_expands, filters.default_filters)
-		mul_expands = filters.filter_expr_list(mul_expands, filters.default_filters)
-
-		var_models = [model.Model(e, p_id=M.id, reln="var_subs") for e in var_expands if e != C]
+		var_models = [model.Model(e, p_id=M.id, reln="var_xpnd") for e in var_expands if e != C]
 		add_models = [model.Model(e, p_id=M.id, reln="add_xpnd") for e in add_expands if e != C]
 		mul_models = [model.Model(e, p_id=M.id, reln="mul_xpnd") for e in mul_expands if e != C]
 

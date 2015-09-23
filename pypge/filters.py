@@ -4,21 +4,23 @@ from sympy import preorder_traversal, numbers
 ##
 ## TODO turn this into a filter which takes a list of functions
 
-def filter_expr_list(expr_list, filters):
+def filter_models(models, filters):
 	ret = []
-	for expr in expr_list:
-		if not filter_expr(expr, filters):
-			ret.append(expr)
+	for modl in models:
+		if not filter_model(modl, filters):
+			ret.append(modl)
 	return ret
 
-def filter_expr(expr, filters):
+def filter_model(expr, filters):
 	for e in preorder_traversal(expr):
 		for f in filters:
 			if f(e):
 				return True
 	return False
 
-def filter_has_int_coeff(expr):
+
+def filter_has_int_coeff(modl):
+	expr = modl.orig
 	if expr.is_Mul:
 			cs, _ = expr.as_coeff_Mul()
 			# print "   ** ", cs, cs == numbers.One, type(cs)
@@ -31,7 +33,8 @@ def filter_has_int_coeff(expr):
 			return True
 	return False
 
-def filter_has_big_pow(expr,big=6):
+def filter_has_big_pow(modl,big=6):
+	expr = modl.orig
 	if expr.is_Pow:
 		B,E = expr.as_base_exp()
 		if abs(E) > big:

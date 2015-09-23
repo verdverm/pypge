@@ -8,17 +8,25 @@ from benchmarks import explicit
 #
 #   objective 1. Pull method for expression generation
 #   objective 2. Use more graph & algebra et all... 
-#   objective 3. Build in stats & logging while dev'n previous 2
+#   objective 3. Build interactive visualization in IPython
+#   objective N. Build in stats & logging while dev'n previous 2
 #
+#
+# - Ipython notebook examples
+#   - D3, or similar
+#   - plot geneology on pareto fronts
+#   - interactive visualizations
 #
 # - networkx & relations for ...
-#   - plot geneology on pareto fronts
-#
 # - algebra
 #   - growing / initing policies
 #   - simplification / expansions
 #   - filtering policies
 #   - +C ???
+#   - OTHER ISSUE:  
+#     - dealing with C vs C_# && 
+#     - model.orig vs model.expr && 
+#     - init'n vs manip'n
 #
 # - logging
 # - statistics
@@ -28,7 +36,6 @@ from benchmarks import explicit
 #   - what's improving and not
 #   - subexpressions#
 #
-# - Ipython notebook examples
 # - scikit learn
 #   - pandas DFs
 #   - get/set parameters
@@ -71,7 +78,7 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 4,
+		max_iter = 10,
 		workers = 2
 		)
 
