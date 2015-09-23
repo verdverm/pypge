@@ -592,7 +592,7 @@ def _randomizedPartition(array, begin, end):
         b = _medianIndexThree(array, begin, begin+s, begin+2*s)
         m = _medianIndexThree(array, m, m-s, m+s)
         e = _medianIndexThree(array, end-1, end-1-s, end-1-2*s)
-    _medianIndexThree(array, b, m, e-1)
+    m = _medianIndexThree(array, b, m, e-1)
 
     array[begin], array[m] = array[m], array[begin]
     return _partition(array, begin, end)

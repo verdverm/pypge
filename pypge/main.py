@@ -78,8 +78,8 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 10,
-		workers = 2
+		max_iter = 4,
+		workers = 1
 		)
 
 	pge.fit(prob['xpts'], prob['ypts'])
