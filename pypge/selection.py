@@ -572,9 +572,29 @@ def _randomizedSelect(array, begin, end, i):
     else:
         return _randomizedSelect(array, q + 1, end, i - k)
 
+def _medianIndexThree(array, i1, i2, i3):
+    c = cmp(array[i1], array[i2])
+    if c < 0:
+        c2 = cmp(array[i1],array[i3])
+        return i1 if c2 < 0 else i2
+    else:
+        c2 = cmp(array[i2],array[i3])
+        return i2 if c2 < 0 else i3
+
 def _randomizedPartition(array, begin, end):
-    i = random.randint(begin, end)
-    array[begin], array[i] = array[i], array[begin]
+    # borrowed from [ https://golang.org/src/sort/sort.go :: doPivot]
+    # finds the median value of 3 or 9 elements, depending on the length
+    m = begin + (end-begin)//2 # Written like this to avoid integer overflow.
+    b,e = begin, end
+    if end-begin > 40:
+        # Tukey's ``Ninther,'' median of three medians of three.
+        s = (end - begin) // 8
+        b = _medianIndexThree(array, begin, begin+s, begin+2*s)
+        m = _medianIndexThree(array, m, m-s, m+s)
+        e = _medianIndexThree(array, end-1, end-1-s, end-1-2*s)
+    _medianIndexThree(array, b, m, e-1)
+
+    array[begin], array[m] = array[m], array[begin]
     return _partition(array, begin, end)
     
 def _partition(array, begin, end):
