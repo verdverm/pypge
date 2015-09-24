@@ -2,14 +2,31 @@ from search import PGE
 
 import expand
 
-from benchmarks import explicit
+from benchmarks import explicit 
 
 ###  TODOS
 #
-# - diffeqs
-#   - datagen with RK4
-#   - numerical evaluation
-#   - benchmarks with point eval
+#   objective 1. Pull method for expression generation
+#   objective 2. Use more graph & algebra et all... 
+#   objective 3. Build interactive visualization in IPython
+#   objective N. Build in stats & logging while dev'n previous 2
+#
+#
+# - Ipython notebook examples
+#   - D3, or similar
+#   - plot geneology on pareto fronts
+#   - interactive visualizations
+#
+# - networkx & relations for ...
+# - algebra
+#   - growing / initing policies
+#   - simplification / expansions
+#   - filtering policies
+#   - +C ???
+#   - OTHER ISSUE:  
+#     - dealing with C vs C_# && 
+#     - model.orig vs model.expr && 
+#     - init'n vs manip'n
 #
 # - logging
 # - statistics
@@ -19,23 +36,20 @@ from benchmarks import explicit
 #   - what's improving and not
 #   - subexpressions#
 #
-# - networkx & relations for ...
-# - algebra
-#   - growing / initing policies
-#   - simplification / expansions
-#   - filtering policies
-#   - +C ???
-#
-# - check states being set properly
-# - distributing to the cloud, pyspark
-#
-# - Ipython notebook examples
 # - scikit learn
 #   - pandas DFs
 #   - get/set parameters
 #   - pipelining
 #   - gridsearch
 #
+# - run on the GPU with theano
+# - distributing to the cloud, pyspark
+#
+#
+#
+# - diffeqs
+#   - problems with default parameters
+#   - need to toggle on system type ???
 #
 # - other system types
 #   - invarients
@@ -64,8 +78,8 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 12,
-		workers = 4
+		max_iter = 4,
+		workers = 1
 		)
 
 	pge.fit(prob['xpts'], prob['ypts'])

@@ -4,16 +4,18 @@ CS = [sympy.Symbol("C_"+str(i)) for i in range(8)]
 
 from lmfit import Parameters
 
+import evaluate
+
 class Model:
 
-	def __init__(self, expr, xs=None, cs=None):
+	def __init__(self, expr, xs=None, cs=None, p_id=-2, reln="unknown"):
 		# Identification please
 		self.id = -2
 		self.iter_id = -2
 
 		# Family tree
-		self.parent_id = -2
-		self.gen_method = None
+		self.parent_id = p_id
+		self.gen_relation = reln
 		
 		# Possible states for a model (in order)
 		self.inited = False
@@ -28,20 +30,22 @@ class Model:
 		self.expanded = False
 		self.finalized = False
 
+		# error accounting
 		self.errored = False
 		self.error = None
 		self.exception = None
 
 		# expression variations
 		self.orig = expr
-		self.expr = None
+		self.expr = expr
 		self.pretty = None
 
 		# vars, coeff, params
-		self.xs = None
-		self.cs = None
+		self.xs = xs
+		self.cs = cs
 		self.params = None
-		self.rewrite_coeff()
+		if self.cs is None:
+			self.rewrite_coeff()
 
 		# fitness metrics
 		self.sz = 0
@@ -58,6 +62,9 @@ class Model:
 		self.eval_nfev = 0
 		self.total_fev = 0
 
+
+
+		# all done, so we be inited
 		self.inited = True
 
 
@@ -99,6 +106,10 @@ class Model:
 			self.coeff = self.rewrite_coeff()
 
 	def rewrite_coeff(self):
+		if self.cs is not None:
+			c_subs = [ (c, C) for c in CS]
+			self.orig = self.expr.subs(c_subs)
+
 		expr, ii = self._rewrite_coeff_helper(self.orig, 0)
 		self.expr = expr
 		self.cs = CS[:ii]
@@ -126,4 +137,7 @@ class Model:
 			args = tuple(args)
 			ret = expr.func(*args)
 		return ret,ii
+
+	def predict(self, model, xs, x_pts):
+		return evaluate.Eval(model, xs, x_pts)
 

@@ -7,12 +7,12 @@ from lmfit import minimize, Parameters
 from sklearn import metrics
 
 
-def Fit(model, xs, X_train, Y_train):
-	expr = model.expr
-
+def Fit(modl, xs, X_train, Y_train):
+	expr = modl.expr
+	c_sub = None
 	def fcn2min(params, x_train, y_train):
 
-		c_sub = [ (str(c), params[str(c)].value) for c in model.cs ]
+		c_sub = [ (str(c), params[str(c)].value) for c in modl.cs ]
 		eqn = expr.subs(c_sub)
 
 		f = sympy.lambdify(xs, eqn, "numpy")
@@ -22,22 +22,23 @@ def Fit(model, xs, X_train, Y_train):
 
 	result = None
 	try:
-		result = minimize(fcn2min, model.params, args=(X_train,Y_train))
+		result = minimize(fcn2min, modl.params, args=(X_train,Y_train))
 	except Exception, e:
-		model.exception = e
-		model.error = "error"
+		modl.exception = e
+		modl.error = "error"
+		print "ERROR HERE: ", expr, c_sub, result, modl.cs
 
-	model.fit_result = result
+	modl.fit_result = result
 
-	if model.error == "error":
-		model.error = "numeric error during fitting"
+	if modl.error == "error":
+		modl.error = "numeric error during fitting"
 	elif not result.success:
-		model.error = "Error fitting: " + str(result.ier) + "  " + result.message
+		modl.error = "Error fitting: " + str(result.ier) + "  " + result.message
 
 
-def Eval(model, xs, X_input):
-	c_sub = [ (str(c), model.params[str(c)].value) for c in model.cs ]
-	eqn = model.expr.subs(c_sub)
+def Eval(modl, xs, X_input):
+	c_sub = [ (str(c), modl.params[str(c)].value) for c in modl.cs ]
+	eqn = modl.expr.subs(c_sub)
 
 	f = sympy.lambdify(xs, eqn, "numpy")
 	y_pred = f(*X_input)

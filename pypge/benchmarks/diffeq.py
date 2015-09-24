@@ -1,5 +1,7 @@
 import sympy
+
 from scipy.integrate import odeint
+
 import numpy as np
 np.random.seed(23)
 
@@ -13,12 +15,17 @@ pp = pprint.PrettyPrinter(indent=4)
 def gen(prob_params, **kwargs):
 	prob_params = prep_params(prob_params, **kwargs)
 
+	pp.pprint(prob_params)
+
 	eqns = []
 	for estr in prob_params['eqn_strs']:
 		e = sympy.sympify(estr)
 		eqns.append(e)
 
 	time_pts = np.arange(0., prob_params['time_end'], prob_params['time_step'])
+	win_sz = len(time_pts)/10
+	if win_sz % 2 == 0:
+		win_sz += 1
 
 	xs_pure = gen_pts(eqns, prob_params['xs'], prob_params['params'], prob_params['init_conds'], time_pts)
 	xs_pure = xs_pure.T
@@ -28,16 +35,10 @@ def gen(prob_params, **kwargs):
 		xs_pts.append(dpts)
 	xs_pts = np.array(xs_pts)
 
-	## TODO numerical derivatives
-	xs_pure_deriv = xs_pure
-	xs_pts_deriv = xs_pts
-	data_pts = xs_pts + xs_pts_deriv 
-
 	prob_params['eqns'] = eqns
 	prob_params['time_pts'] = time_pts
 	prob_params['xs_pure'] = xs_pure
 	prob_params['xs_pts'] = xs_pts
-	prob_params['data_pts'] = data_pts
 
 	return prob_params
 
@@ -54,7 +55,7 @@ def prep_params(prob_params, **kwargs):
 		else:
 			prob_params[key] = value
 
-	pp.pprint(prob_params)
+	# pp.pprint(prob_params)
 	return prob_params
 
 def gen_pts(eqns, xs, params, init_conds, time_pts):
@@ -81,7 +82,7 @@ def SimplePendulum(**kwargs):
 			"R": 1.0   # Length of rod
 		},
 		'eqn_strs': [
-			"V",                 # dO
+			"V",               # dA
 			"(-9.8/R)*sin(A)"  # dV
 		],
 		'init_conds': {
@@ -126,29 +127,36 @@ def ChaoticPendulum(**kwargs):
 # import matplotlib.pyplot as plt
 
 # stuff = SimplePendulum(params={'M':0.2})
-stuff = ChaoticPendulum()
+# stuff = ChaoticPendulum()
 
 
 # t_pts = stuff['time_pts']
-# x_pts = stuff['xs_pure']
+# x_pts = stuff['xs_pts']
+# xs_pts_smooth = stuff['xs_pts_smooth']
+# dx_pts = stuff['xs_pts_deriv']
+
+# print t_pts.shape, x_pts.shape, dx_pts.shape
 
 # fig = plt.figure(1, figsize=(8,8))
 
 # # Plot velocity as a function of time
 # ax1 = fig.add_subplot(311)
 # ax1.plot(t_pts, x_pts[0])
+# ax1.plot(t_pts, xs_pts_smooth[0])
+# ax1.plot(t_pts, dx_pts[0], 'r')
 # ax1.set_xlabel('time')
 # ax1.set_ylabel('velocity')
 
 # # Plot angle as a function of time
 # ax2 = fig.add_subplot(312)
-# ax2.plot(t_pts, x_pts[1])
+# ax2.plot(t_pts, xs_pts_smooth[1])
+# ax2.plot(t_pts, dx_pts[1], 'r')
 # ax2.set_xlabel('time')
 # ax2.set_ylabel('angle')
 
 # # Plot velocity vs angle
 # ax3 = fig.add_subplot(313)
-# ax3.plot(x_pts[0], x_pts[1], '.')
+# ax3.plot(x_pts[0], x_pts[1], '.', ms=2)
 # ax3.set_xlabel('velocity')
 # ax3.set_ylabel('angle')
 
