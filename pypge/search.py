@@ -40,6 +40,8 @@ class PGE:
 
 		self.max_power = 5
 
+		self.algebra_methods = ["expand", "factor"]
+
 		self.zero_epsilon = 1e-6  ## still need to use
 		self.err_method = "mse"
 
@@ -70,7 +72,6 @@ class PGE:
 		# memoizer & grower
 		self.memoizer = memoize.Memoizer(self.vars)
 		self.grower = expand.Grower(self.vars, self.usable_funcs)
-		self.algebra_methods = ["expand", "factor"]
 
 		# Pareto Front stuff
 		self.nsga2_peek = []
@@ -179,19 +180,23 @@ class PGE:
 			to_memo = self.filter_models(first_exprs)
 			if T:
 				T.checkpoint(len(to_memo))
-			to_alge = self.memoize_models(to_memo)
-			if T:
-				T.checkpoint(len(to_alge))
 
-			# algebra the models which made it through
-			algebrad = self.algebra_models(to_alge)
-			if T:
-				T.checkpoint(len(algebrad))
+			to_alge = []
+			if self.algebra_methods is not None and len(self.algebra_methods) > 0:
+				to_alge = self.memoize_models(to_memo)
+				if T:
+					T.checkpoint(len(to_alge))
 
-			# filter and memoize the algebrad models
-			to_memo = self.filter_models(algebrad)
-			if T:
-				T.checkpoint(len(to_memo))
+				# algebra the models which made it through
+				algebrad = self.algebra_models(to_alge)
+				if T:
+					T.checkpoint(len(algebrad))
+
+				# filter and memoize the algebrad models
+				to_memo = self.filter_models(algebrad)
+				if T:
+					T.checkpoint(len(to_memo))
+
 			to_peek = self.memoize_models(to_memo)
 			if T:
 				T.checkpoint(len(to_peek))
@@ -247,19 +252,23 @@ class PGE:
 				to_memo = self.filter_models(expanded)
 				if T:
 					T.checkpoint(len(to_memo))
-				to_alge = self.memoize_models(to_memo)
-				if T:
-					T.checkpoint(len(to_alge))
+				
+				to_alge = []
+				if self.algebra_methods is not None and len(self.algebra_methods) > 0:
+					to_alge = self.memoize_models(to_memo)
+					if T:
+						T.checkpoint(len(to_alge))
 
-				# algebra the models which made it through
-				algebrad = self.algebra_models(to_alge)
-				if T:
-					T.checkpoint(len(algebrad))
+					# algebra the models which made it through
+					algebrad = self.algebra_models(to_alge)
+					if T:
+						T.checkpoint(len(algebrad))
 
-				# filter and memoize the algebrad models
-				to_memo = self.filter_models(algebrad)
-				if T:
-					T.checkpoint(len(to_memo))
+					# filter and memoize the algebrad models
+					to_memo = self.filter_models(algebrad)
+					if T:
+						T.checkpoint(len(to_memo))
+
 				to_peek = self.memoize_models(to_memo)
 				if T:
 					T.checkpoint(len(to_peek))
