@@ -6,6 +6,8 @@ import memoize
 import evaluate
 import selection
 
+from timer import timewith
+
 import numpy
 import sympy
 import lmfit
@@ -42,6 +44,8 @@ class PGE:
 		self.search_vars = None
 		self.usable_vars = None
 		self.usable_funcs = None
+
+		self.print_timing = False
 
 		# number of function evaluations 
 		self.peek_nfev = 0 # mul by peek_npts
@@ -150,80 +154,142 @@ class PGE:
 			for proc in self.eval_procs:
 				proc.start()
 
+		T = None
+		with timewith() as TT:
+			if self.print_timing:
+				T = TT
 
-		# create first models
-		first_exprs = self.grower.first_exprs()
+			# create first models
 
-		# filter and memoize first_exprs models
-		to_memo = self.filter_models(first_exprs)
-		to_alge = self.memoize_models(to_memo)
+			first_exprs = self.grower.first_exprs()
+			print "  create first exprs:", len(first_exprs)
+			if T:
+				T.checkpoint(len(first_exprs))
 
-		# algebra the models which made it through
-		algebrad = self.algebra_models(to_alge)
+			# filter and memoize first_exprs models
+			to_memo = self.filter_models(first_exprs)
+			if T:
+				T.checkpoint(len(to_memo))
+			to_alge = self.memoize_models(to_memo)
+			if T:
+				T.checkpoint(len(to_alge))
 
-		# filter and memoize the algebrad models
-		to_memo = self.filter_models(algebrad)
-		to_peek = self.memoize_models(to_memo)
+			# algebra the models which made it through
+			algebrad = self.algebra_models(to_alge)
+			if T:
+				T.checkpoint(len(algebrad))
 
-		# pass along the unique expressions, plus the algebrad offspring unique
-		to_peek = to_alge + to_peek
+			# filter and memoize the algebrad models
+			to_memo = self.filter_models(algebrad)
+			if T:
+				T.checkpoint(len(to_memo))
+			to_peek = self.memoize_models(to_memo)
+			if T:
+				T.checkpoint(len(to_peek))
 
-		to_eval = []
-		if self.peek_npts == 0:
-			to_eval = to_peek
-		else:
-			self.peek_models(to_peek)
-			self.peek_push_models(to_peek)
-			to_eval = self.peek_pop() + self.peek_pop() # twice the first time
+			# pass along the unique expressions, plus the algebrad offspring unique
+			to_peek = to_alge + to_peek
+			if T:
+				T.checkpoint(len(to_peek))
 
-		self.eval_models(to_eval)
-		self.eval_push_models(to_eval)
+			to_eval = []
+			if self.peek_npts == 0:
+				to_eval = to_peek
+			else:
+				self.peek_models(to_peek)
+				if T:
+					T.checkpoint(len(to_peek))
+				self.peek_push_models(to_peek)
+				if T:
+					T.checkpoint(len(to_peek))
+				to_eval = self.peek_pop() + self.peek_pop() # twice the first time
+				if T:
+					T.checkpoint(len(to_eval))
+
+			self.eval_models(to_eval)
+			if T:
+				T.checkpoint(len(to_eval))
+			self.eval_push_models(to_eval)
+			if T:
+				T.checkpoint(len(to_eval))
 
 
 	def loop(self, iterations):
 		# main loop for # iterations
 		for I in range(iterations):
 			print "\n\nITER: ", I
+		
+			T = None
+			with timewith() as TT:
+				if self.print_timing:
+					T = TT
 
-			# pop some models, these will be finalized next
-			popd = self.eval_pop()
+				# pop some models, these will be finalized next
+				popd = self.eval_pop()
+				if T:
+					T.checkpoint(len(popd))
 
-			# expand these models, popd are finalized
-			expanded = self.expand_models(popd)
+				# expand these models, popd are finalized
+				expanded = self.expand_models(popd)
+				if T:
+					T.checkpoint(len(expanded))
 
-			# filter and memoize expanded models
-			to_memo = self.filter_models(expanded)
-			to_alge = self.memoize_models(to_memo)
+				# filter and memoize expanded models
+				to_memo = self.filter_models(expanded)
+				if T:
+					T.checkpoint(len(to_memo))
+				to_alge = self.memoize_models(to_memo)
+				if T:
+					T.checkpoint(len(to_alge))
 
-			# algebra the models which made it through
-			algebrad = self.algebra_models(to_alge)
+				# algebra the models which made it through
+				algebrad = self.algebra_models(to_alge)
+				if T:
+					T.checkpoint(len(algebrad))
 
-			# filter and memoize the algebrad models
-			to_memo = self.filter_models(algebrad)
-			to_peek = self.memoize_models(to_memo)
+				# filter and memoize the algebrad models
+				to_memo = self.filter_models(algebrad)
+				if T:
+					T.checkpoint(len(to_memo))
+				to_peek = self.memoize_models(to_memo)
+				if T:
+					T.checkpoint(len(to_peek))
 
-			# pass along the unique expressions, plus the algebrad offspring unique
-			to_peek = to_alge + to_peek
+				# pass along the unique expressions, plus the algebrad offspring unique
+				to_peek = to_alge + to_peek
+				if T:
+					T.checkpoint(len(to_peek))
 
-			to_eval = []
-			if self.peek_npts == 0:
-				to_eval = to_peek
-			else:
-				# peek evaluate the unique models
-				self.peek_models(to_peek)
+				to_eval = []
+				if self.peek_npts == 0:
+					to_eval = to_peek
+				else:
+					# peek evaluate the unique models
+					self.peek_models(to_peek)
+					if T:
+						T.checkpoint(len(to_peek))
 
-				# push the peek'd models
-				self.peek_push_models(to_peek)
+					# push the peek'd models
+					self.peek_push_models(to_peek)
+					if T:
+						T.checkpoint(len(to_peek))
 
-				# pop some models for full evaluation
-				to_eval = self.peek_pop()			
+					# pop some models for full evaluation
+					to_eval = self.peek_pop()			
+					if T:
+						T.checkpoint(len(to_eval))
 
-			# fully fit and evaluate these models
-			self.eval_models(to_eval)
+				# fully fit and evaluate these models
+				self.eval_models(to_eval)
+				if T:
+					T.checkpoint(len(to_eval))
 
-			# push fully fit models into the queue for expansion candidacy
-			self.eval_push_models(to_eval)
-			self.print_best(24)
+				# push fully fit models into the queue for expansion candidacy
+				self.eval_push_models(to_eval)
+				if T:
+					T.checkpoint(len(to_eval))
+			
+				self.print_best(24)
 
 
 	def print_best(self, count):
@@ -374,40 +440,31 @@ class PGE:
 
 	def peek_push_models(self, models):
 		print "  peek_queue'n:", len(models)
-		self.nsga2_peek.extend([m for m in models if m is not None and m.errored is False])
-		self.spea2_peek.extend([m for m in models if m is not None and m.errored is False])
-		for m in models:
+		ms = [m for m in models if m is not None and m.errored is False]
+		self.nsga2_peek.extend(ms)
+		self.spea2_peek.extend(ms)
+		for m in ms:
 			m.peek_queued = True
-			# self.peek_push(m)
-
-	def peek_push(self, modl):
-		if modl is None or modl.errored is True:
-			return
-		self.nsga2_peek.append(modl)
-		self.spea2_peek.append(modl)
-		modl.peek_queued = True
+		return ms
 
 	def eval_push_models(self, models):
 		print "  eval_queue'n:", len(models)
-		self.nsga2_list.extend([m for m in models if m is not None and m.errored is False])
-		self.spea2_list.extend([m for m in models if m is not None and m.errored is False])
+		ms = [m for m in models if m is not None and m.errored is False]
+		self.nsga2_list.extend(ms)
+		self.spea2_list.extend(ms)
 		for m in models:
 			m.queued = True
-			# self.eval_push(m)
+		return ms
 
-	def eval_push(self, modl):
-		if modl is None or modl.errored is True:
-			return
-		self.nsga2_list.append(modl)
-		self.spea2_list.append(modl)
-		modl.queued = True
 
 	def peek_pop(self):
-		nsga2_tmp = selection.selNSGA2(self.nsga2_peek, len(self.nsga2_peek))
-		spea2_tmp = selection.selSPEA2(self.spea2_peek, len(self.spea2_peek))
+		nsga2_popd = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
+		spea2_popd = selection.selSPEA2(self.spea2_peek, self.peek_count)
 
-		nsga2_popd, self.nsga2_peek = nsga2_tmp[:self.peek_count], nsga2_tmp[self.peek_count:]
-		spea2_popd, self.spea2_peek = spea2_tmp[:self.peek_count], spea2_tmp[self.peek_count:]
+		# nsga2_tmp = selection.selNSGA2(self.nsga2_peek, len(self.nsga2_peek))
+		# spea2_tmp = selection.selSPEA2(self.spea2_peek, len(self.spea2_peek))
+		# nsga2_popd, self.nsga2_peek = nsga2_tmp[:self.peek_count], nsga2_tmp[self.peek_count:]
+		# spea2_popd, self.spea2_peek = spea2_tmp[:self.peek_count], spea2_tmp[self.peek_count:]
 
 		popd_set = set()
 		for p in nsga2_popd:
@@ -428,11 +485,13 @@ class PGE:
 		return popd_list
 
 	def eval_pop(self):
-		nsga2_tmp = selection.selNSGA2(self.nsga2_list, len(self.nsga2_list))
-		spea2_tmp = selection.selSPEA2(self.spea2_list, len(self.spea2_list))
+		nsga2_popd = selection.selNSGA2(self.nsga2_list, self.pop_count, nd='log')
+		spea2_popd = selection.selSPEA2(self.spea2_list, self.pop_count)
 
-		nsga2_popd, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
-		spea2_popd, self.spea2_list = spea2_tmp[:self.pop_count], spea2_tmp[self.pop_count:]
+		# nsga2_tmp = selection.selNSGA2(self.nsga2_list, len(self.nsga2_list))
+		# spea2_tmp = selection.selSPEA2(self.spea2_list, len(self.spea2_list))
+		# nsga2_popd, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
+		# spea2_popd, self.spea2_list = spea2_tmp[:self.pop_count], spea2_tmp[self.pop_count:]
 
 		popd_set = set()
 		for p in nsga2_popd:
@@ -493,7 +552,7 @@ class PGE:
 				modl.error = err
 				modl.exception = dat
 				modl.errored = True
-				print "GOT HERE ERROR"
+				print "GOT HERE ERROR", err, dat
 			else:
 				modl.score = dat['score']
 				modl.r2 = dat['r2']

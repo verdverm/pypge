@@ -4,6 +4,11 @@ import expand
 
 from benchmarks import explicit 
 
+import pandas
+import numpy
+import sympy
+
+
 ###  TODOS
 #
 #   objective 1. Pull method for expression generation
@@ -64,9 +69,12 @@ from benchmarks import explicit
 #
 #
 
+import time
 
 def main():
 	print "hello pypge!\n"
+
+	start = time.time()
 
 	prob = explicit.Nguyen_12(0.1)
 	print prob['name'] + ":  ", prob['eqn'], "\n"
@@ -78,11 +86,35 @@ def main():
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
 		peek_count = 9,
-		max_iter = 4,
-		workers = 1
+		max_iter = 10,
+		workers = 1,
+		print_timing = True
 		)
 
 	pge.fit(prob['xpts'], prob['ypts'])
 
+	end = time.time()
+
+	print "\n\nTotal Runtime: ", end - start, "seconds\n\n"
+
+
+	# df = pandas.read_csv("~/Downloads/dataset4.csv", header=None, names=["m", "l", "n", "s", "y"], delim_whitespace=True)
+	# ins = numpy.array([df['m'].values, df['l'].values, df['n'].values, df['s'].values])
+	# outs = df['y'].values
+
+	# pge = PGE(
+	# 	system_type = "explicit",
+	# 	search_vars = "y",
+	# 	usable_vars = "m l n s",
+	# 	#usable_funcs = (log, sin, cos, exp, tan),
+	# 	usable_funcs = [sympy.log],
+	# 	# usable_funcs = expand.BASIC_BASE,
+	# 	pop_count = 3,
+	# 	peek_count = 9,
+	# 	max_iter = 50,
+	# 	workers = 2
+	# )
+
+	# pge.fit(ins, outs)
 
 main()

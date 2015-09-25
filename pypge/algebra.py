@@ -36,6 +36,7 @@ def manip_model(modl, method):
 		return None, "same"
 
 	ret_modl = model.Model(expr, xs=modl.xs, cs=modl.cs)
+	ret_modl.rewrite_coeff()
 	return ret_modl, None
 
 

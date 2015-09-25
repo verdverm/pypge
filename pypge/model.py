@@ -1,6 +1,6 @@
 import sympy
 C = sympy.Symbol('C')
-CS = [sympy.Symbol("C_"+str(i)) for i in range(8)]
+CS = [sympy.Symbol("C_"+str(i)) for i in range(32)]
 
 from lmfit import Parameters
 
