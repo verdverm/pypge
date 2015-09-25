@@ -442,7 +442,7 @@ class PGE:
 		print "  peek_queue'n:", len(models)
 		ms = [m for m in models if m is not None and m.errored is False]
 		self.nsga2_peek.extend(ms)
-		self.spea2_peek.extend(ms)
+		# self.spea2_peek.extend(ms)
 		for m in ms:
 			m.peek_queued = True
 		return ms
@@ -451,7 +451,7 @@ class PGE:
 		print "  eval_queue'n:", len(models)
 		ms = [m for m in models if m is not None and m.errored is False]
 		self.nsga2_list.extend(ms)
-		self.spea2_list.extend(ms)
+		# self.spea2_list.extend(ms)
 		for m in models:
 			m.queued = True
 		return ms
@@ -459,7 +459,7 @@ class PGE:
 
 	def peek_pop(self):
 		nsga2_popd = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
-		spea2_popd = selection.selSPEA2(self.spea2_peek, self.peek_count)
+		# spea2_popd = selection.selSPEA2(self.spea2_peek, self.peek_count)
 
 		# nsga2_tmp = selection.selNSGA2(self.nsga2_peek, len(self.nsga2_peek))
 		# spea2_tmp = selection.selSPEA2(self.spea2_peek, len(self.spea2_peek))
@@ -469,8 +469,8 @@ class PGE:
 		popd_set = set()
 		for p in nsga2_popd:
 			popd_set.add(p)
-		for p in spea2_popd:
-			popd_set.add(p)
+		# for p in spea2_popd:
+		# 	popd_set.add(p)
 
 		popd_list = list(popd_set)
 		# print "  uniqued peek'd pop'd:"
@@ -479,14 +479,14 @@ class PGE:
 			# print "    ", p
 
 		self.nsga2_peek = [m for m in self.nsga2_peek if not m.peek_popped]
-		self.spea2_peek = [m for m in self.spea2_peek if not m.peek_popped]
+		# self.spea2_peek = [m for m in self.spea2_peek if not m.peek_popped]
 
-		print "  peek_pop'd", len(popd_list)
+		print "  peek_pop'd", len(popd_list), "of", len(self.nsga2_peek) + len(popd_list)
 		return popd_list
 
 	def eval_pop(self):
 		nsga2_popd = selection.selNSGA2(self.nsga2_list, self.pop_count, nd='log')
-		spea2_popd = selection.selSPEA2(self.spea2_list, self.pop_count)
+		# spea2_popd = selection.selSPEA2(self.spea2_list, self.pop_count)
 
 		# nsga2_tmp = selection.selNSGA2(self.nsga2_list, len(self.nsga2_list))
 		# spea2_tmp = selection.selSPEA2(self.spea2_list, len(self.spea2_list))
@@ -496,8 +496,8 @@ class PGE:
 		popd_set = set()
 		for p in nsga2_popd:
 			popd_set.add(p)
-		for p in spea2_popd:
-			popd_set.add(p)
+		# for p in spea2_popd:
+		# 	popd_set.add(p)
 
 		popd_list = list(popd_set)
 		# print "  uniqued eval'd pop'd:"
@@ -506,9 +506,9 @@ class PGE:
 			# print "    ", p
 
 		self.nsga2_list = [m for m in self.nsga2_list if not m.popped]
-		self.spea2_list = [m for m in self.spea2_list if not m.popped]
+		# self.spea2_list = [m for m in self.spea2_list if not m.popped]
 
-		print "  eval_pop'd", len(popd_list)
+		print "  eval_pop'd", len(popd_list), "of", len(self.nsga2_list) + len(popd_list)
 		return popd_list
 
 
@@ -552,7 +552,7 @@ class PGE:
 				modl.error = err
 				modl.exception = dat
 				modl.errored = True
-				print "GOT HERE ERROR", err, dat
+				# print "GOT HERE ERROR", err, dat
 			else:
 				modl.score = dat['score']
 				modl.r2 = dat['r2']
