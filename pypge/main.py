@@ -87,7 +87,7 @@ def main():
 		pop_count = 3,
 		peek_count = 9,
 		max_iter = 16,
-		workers = 1,
+		workers = 2,
 		print_timing = True
 		)
 

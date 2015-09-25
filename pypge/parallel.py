@@ -1,4 +1,5 @@
 import search
+import algebra
 
 ## We ~can~ parallelize the following stages
 #
@@ -10,6 +11,10 @@ import search
 #  '-' means it showed loss
 #  '?' means we don't know yet
 #
+
+# was getting a consistent deadlock, or infinite loop here, in SymPy 7.6, upgraded locally to 7.6.1  (conda vs pip)
+# File "/Users/tony/anaconda/lib/python2.7/site-packages/sympy/polys/densearith.py", line 770, in dup_mul
+#   for j in xrange(max(0, i - dg), min(df, i) + 1):
 
 
 ## PEEK EVALUATION MULTIPROCESSING
@@ -63,6 +68,30 @@ def unwrap_self_eval_model_queue(pge_instance):
 					'nfev': modl.fit_result.nfev
 				}
 				pge_instance.eval_out_queue.put( (pos, None, ret_data) )
+		except Exception, e:
+			print "breaking!", e, "\n  ", pos, modl.expr
+			break
+
+
+## ALGEBRA MULTIPROCESSING
+def unwrap_self_alge_model_queue(pge_instance):
+	while True:
+		try:
+			val = pge_instance.alge_in_queue.get()
+			if val is None:
+				break;
+			pos = val[0]
+			modl = val[1]
+			meth = val[2]
+
+
+			alged, err = algebra.manip_model(modl, meth)
+			if err is not None:
+				pge_instance.alge_out_queue.put( (pos, err, None, None) )
+			else:
+
+
+				pge_instance.alge_out_queue.put( (pos, None, meth, alged) )
 		except Exception, e:
 			print "breaking!", e, "\n  ", pos, modl.expr
 			break

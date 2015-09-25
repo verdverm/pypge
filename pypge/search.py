@@ -18,7 +18,10 @@ import multiprocessing as mp
 import parallel
 
 numpy.random.seed(23)
+
+##  size, score
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
+
 
 class PGE:
 	
@@ -104,6 +107,10 @@ class PGE:
 			self.eval_out_queue = mp.Queue(1024)
 			self.eval_procs = [mp.Process(target=parallel.unwrap_self_eval_model_queue, args=(self,) ) for i in range(self.workers)]
 
+			self.alge_in_queue = mp.Queue(1024)
+			self.alge_out_queue = mp.Queue(1024)
+			self.alge_procs = [mp.Process(target=parallel.unwrap_self_alge_model_queue, args=(self,) ) for i in range(self.workers)]
+
 
 
 	# sklearn estimator interface functions
@@ -152,6 +159,8 @@ class PGE:
 			for proc in self.peek_procs:
 				proc.start()
 			for proc in self.eval_procs:
+				proc.start()
+			for proc in self.alge_procs:
 				proc.start()
 
 		T = None
@@ -351,10 +360,14 @@ class PGE:
 				self.peek_in_queue.put(None)
 			for proc in self.eval_procs:
 				self.eval_in_queue.put(None)
+			for proc in self.alge_procs:
+				self.alge_in_queue.put(None)
 
 			for proc in self.peek_procs:
 				proc.join()
 			for proc in self.eval_procs:
+				proc.join()
+			for proc in self.alge_procs:
 				proc.join()
 
 		print "\n\ndone\n\n"
@@ -412,23 +425,67 @@ class PGE:
 		return unique
 
 	def algebra_models(self, models):
-		print "  algebra:", len(models)
-		alges = []
-		for modl in models:
-			for meth in self.algebra_methods:
-				manipd, err = algebra.manip_model(modl,meth)
-				if err is not None:
-					if err == "same":
-						continue
+		if self.workers > 1:
+			return self.algebra_models_multiprocess(models)
+		else:
+			print "  algebra:", len(models)
+			alges = []
+			for modl in models:
+				for meth in self.algebra_methods:
+					manipd, err = algebra.manip_model(modl,meth)
+					if err is not None:
+						if err == "same":
+							continue
+						else:
+							print "Error:", err
 					else:
-						print "Error:", err
+						# print modl.expr, "==", meth, "==>", manipd.expr, manipd.xs, manipd.cs
+						manipd.parent_id = modl.id
+						manipd.gen_relation = meth
+						alges.append(manipd)
+				modl.algebrad = True
+			return alges
+
+	def algebra_models_multiprocess(self, models):
+		print "  multi-algebra:", len(models)
+		alges = []
+		
+		for i,m in enumerate(models):
+			for meth in self.algebra_methods:
+				try:
+					self.alge_in_queue.put( (i,m, meth) )
+				except Exception, e:
+					print "alge send error!", e, "\n  ", i, m.expr
+					break
+			m.algebrad = True
+
+		
+		for i in range(len(models) * 2):
+			try:
+				ret = self.alge_out_queue.get()
+			except Exception, e:
+				print "alge recv error!", e, "\n  ", i
+				break
+
+			pos = ret[0]
+			err = ret[1]
+			meth = ret[2]
+			manipd = ret[3]
+			modl = models[ret[0]]
+
+			if err is not None:
+				if err == "same":
+					continue
 				else:
-					# print modl.expr, "==", meth, "==>", manipd.expr, manipd.xs, manipd.cs
-					manipd.parent_id = modl.id
-					manipd.gen_relation = meth
-					alges.append(manipd)
-			modl.algebrad = True
+					print "Error:", err
+			else:
+				# print modl.expr, "==", meth, "==>", manipd.expr, manipd.xs, manipd.cs
+				manipd.parent_id = modl.id
+				manipd.gen_relation = meth
+				alges.append(manipd)
+
 		return alges
+
 
 	def add_rm_const(self, models):
 		print "  add_rm_c:", len(models)

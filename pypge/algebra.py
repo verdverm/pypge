@@ -24,6 +24,7 @@ def tree_size(eq):
 
 
 def manip_model(modl, method):
+	# print "      {:8s}  {:s}".format(method, modl.expr)
 	expr, err = do_simp(modl.expr, method)
 	if err is not None:
 		return None, err

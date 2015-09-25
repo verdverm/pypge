@@ -19,6 +19,11 @@ def filter_model(expr, filters):
 	return False
 
 
+def filter_too_big(modl, big=64):
+	if modl.size() > big:
+		return True
+	return False
+
 def filter_has_int_coeff(modl):
 	expr = modl.orig
 	if expr.is_Mul:
@@ -41,5 +46,5 @@ def filter_has_big_pow(modl,big=6):
 			return True
 	return False
 
-default_filters = [filter_has_int_coeff,filter_has_big_pow]
+default_filters = [filter_too_big,filter_has_int_coeff,filter_has_big_pow]
 
