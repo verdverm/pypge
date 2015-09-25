@@ -46,5 +46,9 @@ def filter_has_big_pow(modl,big=6):
 			return True
 	return False
 
+<<<<<<< HEAD
 default_filters = [filter_too_big,filter_has_int_coeff,filter_has_big_pow]
+=======
+default_filters = [filter_too_big, filter_has_int_coeff,filter_has_big_pow]
+>>>>>>> fa9cd0770bc406173121a72918277ac21566b39f
 
