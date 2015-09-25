@@ -14,7 +14,10 @@ class timewith():
     def checkpoint(self, nitems=1):
         self.last = self.curr
         self.curr = time.time()
-        print '     {:14.8f} seconds, {:14.8f} per item'.format(self.elapsed, self.elapsed / nitems)
+        if nitems == 0:
+            print '     {:14.8f} seconds'.format(self.elapsed)
+        else:
+            print '     {:14.8f} seconds, {:14.8f} per item'.format(self.elapsed, self.elapsed / nitems)
 
     def __enter__(self):
         return self

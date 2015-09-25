@@ -76,50 +76,44 @@ def main():
 
 	start = time.time()
 
-#	prob = explicit.Nguyen_12(0.1)
-#	print prob['name'] + ":  ", prob['eqn'], "\n"
-#
-#	pge = PGE(
-#		system_type = "explicit",
-#		search_vars = "y",
-#		usable_vars = prob['xs_str'],
-#		# usable_funcs = expand.BASIC_BASE,
-#		pop_count = 3,
-#		peek_count = 8,
-#		max_iter = 10,
-#		workers = 3,
-#		print_timing = True
-#		)
-#
-#	pge.fit(prob['xpts'], prob['ypts'])
-
-
-
-	df = pandas.read_csv("../dataset4.csv", header=None, names=["m", "l", "n", "s", "y"], delim_whitespace=True)
-	ins = numpy.array([df['m'].values, df['l'].values, df['n'].values, df['s'].values])
-	outs = df['y'].values
+	prob = explicit.Nguyen_12(0.1)
+	print prob['name'] + ":  ", prob['eqn'], "\n"
 
 	pge = PGE(
 		system_type = "explicit",
 		search_vars = "y",
-		usable_vars = "m l n s",
-		#usable_funcs = (log, sin, cos, exp, tan),
-		usable_funcs = [sympy.log],
+		usable_vars = prob['xs_str'],
 		# usable_funcs = expand.BASIC_BASE,
 		pop_count = 3,
-<<<<<<< HEAD
-		peek_count = 9,
-		max_iter = 16,
-		workers = 2,
-=======
 		peek_count = 20,
-		max_iter = 50,
-		workers = 3,
->>>>>>> fa9cd0770bc406173121a72918277ac21566b39f
+		max_iter = 10,
+		workers = 2,
 		print_timing = True
 		)
 
-	pge.fit(ins, outs)
+	pge.fit(prob['xpts'], prob['ypts'])
+
+
+
+	# df = pandas.read_csv("../dataset4.csv", header=None, names=["m", "l", "n", "s", "y"], delim_whitespace=True)
+	# ins = numpy.array([df['m'].values, df['l'].values, df['n'].values, df['s'].values])
+	# outs = df['y'].values
+
+	# pge = PGE(
+	# 	system_type = "explicit",
+	# 	search_vars = "y",
+	# 	usable_vars = "m l n s",
+	# 	#usable_funcs = (log, sin, cos, exp, tan),
+	# 	usable_funcs = [sympy.log],
+	# 	# usable_funcs = expand.BASIC_BASE,
+	# 	pop_count = 3,
+	# 	peek_count = 20,
+	# 	max_iter = 50,
+	# 	workers = 2,
+	# 	print_timing = True
+	# 	)
+
+	# pge.fit(ins, outs)
 
 
 	end = time.time()
