@@ -17,6 +17,9 @@ import sympy
 #   objective N. Build in stats & logging while dev'n previous 2
 #
 #
+#   Normalize metric values
+#
+#
 # - Ipython notebook examples
 #   - D3, or similar
 #   - plot geneology on pareto fronts

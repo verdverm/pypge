@@ -117,10 +117,10 @@ function gen(numP, iCond, filename)
 	printf("\n")
 endfunction 
 
-# gen(2000,g0,"yeast2000.txt");
+gen(2000,g0,"yeast2000.txt");
 # gen(20000,g0,"yeast20000.txt");
 # gen(200000,g0,"yeast200000.txt");
-gen(1000000,g0,"yeast1000000.txt");
+# gen(1000000,g0,"yeast1000000.txt");
 
 
 printf("Goodbye!\n")

@@ -97,7 +97,7 @@ class Mapper:
 		if e is sympy.Symbol:
 			return self.map_symbol(expr), None
 
-		if e is sympy.Integer or e is sympy.numbers.Zero or e is sympy.numbers.One:
+		if e is sympy.Integer or e is sympy.numbers.Zero or e is sympy.numbers.One or e is sympy.numbers.Half:
 			return [2, int(expr.evalf(0))], None
 
 		if e is sympy.Float or e is sympy.numbers.Pi:

@@ -20,6 +20,14 @@ def gen(prob_params, **kwargs):
 	eqns = []
 	for estr in prob_params['eqn_strs']:
 		e = sympy.sympify(estr)
+		print e
+		# if we have extra substitutions, do that now
+		# (generally used for shared sub-expressions, for readability)
+		if 'eqn_subs' in prob_params:
+			esubs = prob_params['eqn_subs']
+			for old,new in esubs.items():
+				e = e.subs(old,new)
+		print e, "\n"
 		eqns.append(e)
 
 	time_pts = np.arange(0., prob_params['time_end'], prob_params['time_step'])
@@ -64,9 +72,12 @@ def gen_pts(eqns, xs, params, init_conds, time_pts):
 
 	def evalr(curr_xs_vals, t):
 		derivs = [ f(t, *curr_xs_vals) for f in fs ]
+		# print "\nderivs:\n", derivs
 		return derivs
 
 	iconds = [val for k,val in init_conds.items()]
+
+	# print "\niconds:\n", iconds
 
 	pts = odeint(evalr, iconds, time_pts)
 	return pts
@@ -124,16 +135,103 @@ def ChaoticPendulum(**kwargs):
 
 
 
-# import matplotlib.pyplot as plt
+
+
+def YeastMetabolism(**kwargs):
+	this = {
+		'name': 'YeastMetabolism',
+		'xs_str': ["s1", "s2", "s3", "s4", "n2", "a3", "s5", "a2", "n1"],
+		'params': {
+			"J0": 3,           # mM/min
+			"k1": 100.0,       # /mM*min
+			"k2": 6.0,         # /mM*min
+			"k3": 16.0,        # /mM*min
+			"k4": 100.0,       # /mM*min
+			"k5": 1.28,        # /min
+			"k6": 12.0,        # /mM*min
+			"k" : 1.3,         # /min
+			"K" : 13.0,        # /min
+			"q" : 4.0,
+			"K1": 0.52,        # mM
+			"N" : 1.0,         # mM
+			"A" : 4.0,         # mM
+			"P" : 0.1,
+		},
+		'eqn_subs': {
+			'Ja' :  "K*(s4-s5)",
+			"v1" :  "k1*s1*a3/fA3",  
+			"fA3":  "1.0+(a3/K1)^q",  # meta sub, must be ordered properly
+			"v2" :  "k2*s2*n1",
+			"v3" :  "k3*s3*a2",
+			"v4" :  "k4*s4*n2",
+			"v5" :  "k5*a3",
+			"v6" :  "k6*s2*n2",
+			"v7" :  "k*s5"
+		},
+		'eqn_strs': {
+			"J0 - v1",					#s1
+			"2.0*v1 - v2 - v6",			#s2
+			"v2 - v3",					#s3
+			"v3 - v4 - Ja",				#s4
+			"v2 - v4 - v6",				#n2
+			"-2.0*v1 + 2.0*v3 - v5",	#a3
+			"P*Ja - v7",				#s5
+			"a2",						#a2
+			"n1",						#n1
+		},
+		'init_conds': {
+			"s1": 5.8,
+			"s2": 0.9,
+			"s3": 0.2,
+			"s4": 0.2,
+			"n2": 0.1,
+			"a3": 2.4,
+			"s5": 0.1,
+			"a2": 4.0 - 2.4,			# A - a3
+			"n1": 1.0 - 0.1				# N - n2
+		},
+		'time_end': 10.0,
+		'time_step': 0.01,
+		'noise': 0.001
+	}
+	return gen(this, **kwargs)
+
+
+
+
+import matplotlib.pyplot as plt
 
 # stuff = SimplePendulum(params={'M':0.2})
 # stuff = ChaoticPendulum()
+stuff = YeastMetabolism()
 
+L = len(stuff['time_pts'])
+t_pts  = stuff['time_pts']
+x_pts  = stuff['xs_pts']
+t_ptsT = np.reshape(t_pts, (1,L))
 
-# t_pts = stuff['time_pts']
-# x_pts = stuff['xs_pts']
-# xs_pts_smooth = stuff['xs_pts_smooth']
-# dx_pts = stuff['xs_pts_deriv']
+print L, t_ptsT.shape, x_pts.shape
+
+data = np.concatenate( (t_ptsT,x_pts), axis=0)
+# data = np.array( [t_pts,x_pts], axis=0)
+
+print data.shape, data.T.shape
+ 
+
+plt.plot(t_pts,x_pts[0])
+plt.plot(t_pts,x_pts[1])
+plt.plot(t_pts,x_pts[2])
+plt.plot(t_pts,x_pts[3])
+plt.plot(t_pts,x_pts[4])
+plt.plot(t_pts,x_pts[5])
+plt.plot(t_pts,x_pts[6])
+plt.show()
+
+# import json
+# str_data = json.dumps(data.T.tolist(), indent=4)
+
+# with open('yeast.json', 'w') as the_file:
+# 	the_file.write(str_data)
 
 # print t_pts.shape, x_pts.shape, dx_pts.shape
 

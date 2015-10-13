@@ -1,12 +1,49 @@
-from sympy import *
+import sympy
 import numpy as np
 np.random.seed(23)
 
-x = Symbol('x')
-y = Symbol('y')
-z = Symbol('z')
-v = Symbol('v')
-w = Symbol('w')
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+
+
+x = sympy.Symbol('x')
+y = sympy.Symbol('y')
+z = sympy.Symbol('z')
+v = sympy.Symbol('v')
+w = sympy.Symbol('w')
+
+def gen(prob_params, **kwargs):
+
+	prob_params = prep_params(prob_params, **kwargs)
+	pp.pprint(prob_params)
+
+	eqn = sympy.sympify(prob_params['eqn_str'])
+	xpts = gen_xpts(prob_params['xs_params'], prob_params['npts'])
+	ypure = sympy.lambdify(prob_params['xs'],eqn,"numpy")(*xpts)
+	ypts = ypure + np.random.normal(0, prob_params['noise'], len(ypure))
+
+	prob_params['eqn'] = eqn
+	prob_params['xpts'] = xpts
+	prob_params['ypure'] = ypure
+	prob_params['ypts'] = ypts
+
+	return prob_params
+
+
+def prep_params(prob_params, **kwargs):
+	prob_params['xs'] = sympy.symbols(prob_params['xs_str'])
+
+	# override locals with kwargs
+	for key, value in kwargs.items():
+		if key == "params":
+			for param,val in value.items():
+				prob_params['params'][param] = val
+		else:
+			prob_params[key] = value
+
+	# pp.pprint(prob_params)
+	return prob_params
+
 
 def gen_xpts(xs_params, npts):
 	pts = []
@@ -16,172 +53,234 @@ def gen_xpts(xs_params, npts):
 	xpts = np.array(pts)
 	return xpts
 
-def gen(name,eqn_str, xs, xs_params, npts, noise):
-	eqn = sympify(eqn_str)
-	xpts = gen_xpts(xs_params, npts)
-	ypure = lambdify(xs,eqn,"numpy")(*xpts)
-	ypts = ypure + np.random.normal(0, noise, len(ypure))
 
-	xs_str = " ".join(str(xi) for xi in xs)
 
-	return {
-		'name': name,
-		'eqn_str': eqn_str,
-		'eqn': eqn,
-		'xs': xs,
-		'xs_str': xs_str,
-		'xs_params': xs_params,
-		'xpts': xpts,
-		'ypure': ypure,
-		'ypts': ypts
+def Explicit_1D(**kwargs):
+	this = {
+		'name': "Koza_01",
+		'xs_str': ["x"],
+		'eqn_str': "x**4 + x**3 + x**2 + x",
+		'xs_params': [ (-4.0,4.0) ],
+		'npts': 200,
+		'noise': 0.1
 	}
+	return gen(this,**kwargs)
 
 
 # 1 input: x
-def Koza_1(noise):
-	xs_params = [ (-4.0,4.0) ]
-	npts = 200
-	eqn_str = "x**4 + x**3 + x**2 + x"
-	xs = [x]
-	return gen("Koza_1", eqn_str,xs,xs_params,npts,noise)
+def Koza_01(**kwargs):
+	this = {
+		'name': "Koza_01",
+		'xs_str': ["x"],
+		'eqn_str': "x**4 + x**3 + x**2 + x",
+		'xs_params': [ (-4.0,4.0) ],
+		'npts': 200,
+		'noise': 5.0
+	}
+	return gen(this,**kwargs)
 
-def Koza_2(noise):
-	xs_params = [ (-4.0,4.0) ]
-	npts = 200
-	eqn_str = "x**5 - 2*x**3 + x"
-	xs = [x]
-	return gen("Koza_2", eqn_str,xs,xs_params,npts,noise)
+def Koza_02(**kwargs):
+	this = {
+		'name': "Koza_02",
+		'xs_str': ["x"],
+		'eqn_str': "x**5 - 2*x**3 + x",
+		'xs_params': [ (-4.0,4.0) ],
+		'npts': 200,
+		'noise': 10.0
+	}
+	return gen(this,**kwargs)
 
-def Koza_3(noise):
-	xs_params = [ (-4.0,4.0) ]
-	npts = 200
-	eqn_str = "x**6 - 2*x**4 + x**2"
-	xs = [x]
-	return gen("Koza_3", eqn_str,xs,xs_params,npts,noise)
+def Koza_03(**kwargs):
+	this = {
+		'name': "Koza_03",
+		'xs_str': ["x"],
+		'eqn_str': "x**6 - 2*x**4 + x**2",
+		'xs_params': [ (-4.0,4.0) ],
+		'npts': 200,
+		'noise': 10.0
+	}
+	return gen(this,**kwargs)
 
-def Lipson_1(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 200
-	eqn_str = "1.5 * x**2 - x**3"
-	xs = [x]
-	return gen("Lipson_1", eqn_str,xs,xs_params,npts,noise)
+def Lipson_01(**kwargs):
+	this = {
+		'name': "Lipson_01",
+		'xs_str': ["x"],
+		'eqn_str': "1.5 * x**2 - x**3",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 200,
+		'noise': 3.0
+	}
+	return gen(this,**kwargs)
 
-def Lipson_2(noise):
-	xs_params = [ (-9.7,9.7) ]
-	npts = 500
-	eqn_str = "exp(Abs(x)) * sin(x)"
-	xs = [x]
-	return gen("Lipson_2", eqn_str,xs,xs_params,npts,noise)
+def Lipson_02(**kwargs):
+	this = {
+		'name': "Lipson_02",
+		'xs_str': ["x"],
+		'eqn_str': "exp(Abs(x)) * sin(x)",
+		'xs_params': [ (-9.7,9.7) ],
+		'npts': 500,
+		'noise': 20.0
+	}
+	return gen(this,**kwargs)
 
-def Lipson_3(noise):
-	xs_params = [ (-14.0,14.0) ]
-	npts = 500
-	eqn_str = "x**2 * exp(sin(x)) + x + sin(pi/4.0 - x**3)"
-	xs = [x]
-	return gen("Lipson_3", eqn_str,xs,xs_params,npts,noise)
+def Lipson_03(**kwargs):
+	this = {
+		'name': "Lipson_03",
+		'xs_str': ["x"],
+		'eqn_str': "x**2 * exp(sin(x)) + x + sin(pi/4.0 - x**3)",
+		'xs_params': [ (-14.0,14.0) ],
+		'npts': 500,
+		'noise': 5.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_01(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 200
-	eqn_str = "x**3 + x**2 + x"
-	xs = [x]
-	return gen("Nguyen_01", eqn_str,xs,xs_params,npts,noise)
 
-def Nguyen_02(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 200
-	eqn_str = "x**4 + x**3 + x**2 + x"
-	xs = [x]
-	return gen("Nguyen_02", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_01(**kwargs):
+	this = {
+		'name': "Nguyen_01",
+		'xs_str': ["x"],
+		'eqn_str': "x**3 + x**2 + x",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 200,
+		'noise': 3.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_03(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 200
-	eqn_str = "x**5 + x**4 + x**3 + x**2 + x"
-	xs = [x]
-	return gen("Nguyen_03", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_02(**kwargs):
+	this = {
+		'name': "Nguyen_02",
+		'xs_str': ["x"],
+		'eqn_str': "x**4 + x**3 + x**2 + x",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 200,
+		'noise': 5.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_04(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 200
-	eqn_str = "x**6 + x**5 + x**4 + x**3 + x**2 + x"
-	xs = [x]
-	return gen("Nguyen_04", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_03(**kwargs):
+	this = {
+		'name': "Nguyen_03",
+		'xs_str': ["x"],
+		'eqn_str':  "x**5 + x**4 + x**3 + x**2 + x",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 200,
+		'noise': 10.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_05(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 1000 
-	eqn_str = "sin(x**2)*cos(x) - 1"
-	xs = [x]
-	return gen("Nguyen_05", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_04(**kwargs):
+	this = {
+		'name': "Nguyen_04",
+		'xs_str': ["x"],
+		'eqn_str':  "x**6 + x**5 + x**4 + x**3 + x**2 + x",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 200,
+		'noise': 10.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_06(noise):
-	xs_params = [ (-5.0,5.0) ]
-	npts = 1000 
-	eqn_str = "sin(x) + sin(x + x**2)"
-	xs = [x]
-	return gen("Nguyen_06", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_05(**kwargs):
+	this = {
+		'name': "Nguyen_05",
+		'xs_str': ["x"],
+		'eqn_str': "sin(x**2)*cos(x) - 1",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 1000,
+		'noise': 0.025
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_07(noise):
-	xs_params = [ (0.0,1000.0) ]
-	npts = 1000 
-	eqn_str = "ln(x+1) + ln(x**2 + 1)"
-	xs = [x]
-	return gen("Nguyen_07", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_06(**kwargs):
+	this = {
+		'name': "Nguyen_06",
+		'xs_str': ["x"],
+		'eqn_str': "sin(x) + sin(x + x**2)",
+		'xs_params': [ (-5.0,5.0) ],
+		'npts': 1000,
+		'noise': 0.1
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_08(noise):
-	xs_params = [ (0.0001,10000.0) ]
-	npts = 1000 
-	eqn_str = "sqrt(x)"
-	xs = [x]
-	return gen("Nguyen_08", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_07(**kwargs):
+	this = {
+		'name': "Nguyen_07",
+		'xs_str': ["x"],
+		'eqn_str': "ln(x+1) + ln(x**2 + 1)",
+		'xs_params': [ (0.0,1000.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
+
+def Nguyen_08(**kwargs):
+	this = {
+		'name': "Nguyen_08",
+		'xs_str': ["x"],
+		'eqn_str': "sqrt(x)",
+		'xs_params': [ (0.0001,10000.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
+
 
 
 # 2 inputs: x,y
-def Nguyen_09(noise):
-	xs_params = []
-	xs_params.append( (-10.0,10.0) )
-	xs_params.append( (-6.0,6.0) )
-	npts = 1000
-	eqn_str = "sin(x) + sin(y**2)"
-	xs = [x,y]
-	return gen("Nguyen_09", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_09(**kwargs):
+	this = {
+		'name': "Nguyen_09",
+		'xs_str': ["x", "y"],
+		'eqn_str': "sin(x) + sin(y**2)",
+		'xs_params': [ (-10.0,10.0), (-6.0,6.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_10(noise):
-	xs_params = []
-	xs_params.append( (-7.0,7.0) )
-	xs_params.append( (-7.0,7.0) )
-	npts = 1000
-	eqn_str = "2*sin(x)*cos(y)"
-	xs = [x,y]
-	return gen("Nguyen_10", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_10(**kwargs):
+	this = {
+		'name': "Nguyen_10",
+		'xs_str': ["x", "y"],
+		'eqn_str': "2*sin(x)*cos(y)",
+		'xs_params': [ (-7.0,7.0), (-7.0,7.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_11(noise):
-	xs_params = []
-	xs_params.append( (0.0,4.0) )
-	xs_params.append( (1.0,4.0) )
-	npts = 1000
-	eqn_str = "x**y"
-	xs = [x,y]
-	return gen("Nguyen_11", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_11(**kwargs):
+	this = {
+		'name': "Nguyen_11",
+		'xs_str': ["x", "y"],
+		'eqn_str': "x**y",
+		'xs_params': [ (0.0,4.0), (1.0,4.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
 
-def Nguyen_12(noise):
-	xs_params = []
-	xs_params.append( (-8.0,8.0) )
-	xs_params.append( (-8.0,8.0) )
-	npts = 1000
-	eqn_str = "x**4 - x**3 + 0.5*y**2 - y"
-	xs = [x,y]
-	return gen("Nguyen_12", eqn_str,xs,xs_params,npts,noise)
+def Nguyen_12(**kwargs):
+	this = {
+		'name': "Nguyen_12",
+		'xs_str': ["x", "y"],
+		'eqn_str': "x**4 - x**3 + 0.5*y**2 - y",
+		'xs_params': [ (-8.0,8.0), (-8.0,8.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
 
-def Pagie_1(noise):
-	xs_params = []
-	xs_params.append( (0.0001,3.0) )
-	xs_params.append( (0.0001,3.0) )
-	npts = 1000
-	eqn_str = "1 / (1 + x**-4) + 1 / (1 + y**-4)"
-	xs = [x,y]
-	return gen("Pagie_1", eqn_str,xs,xs_params,npts,noise)
+
+def Pagie_01(noise):
+	this = {
+		'name': "Pagie_01",
+		'xs_str': ["x", "y"],
+		'eqn_str': "1 / (1 + x**-4) + 1 / (1 + y**-4)",
+		'xs_params': [ (0.0001,3.0), (0.0001,3.0) ],
+		'npts': 1000,
+		'noise': 1.0
+	}
+	return gen(this,**kwargs)
 
 
 # 5 inputs: x,y,z,v,w
