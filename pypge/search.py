@@ -47,7 +47,7 @@ class PGE:
 
 		self.zero_epsilon = 1e-6  ## still need to use
 		self.err_method = "mse"
-		self.fitness_name = "normalized_size_score"
+		self.fitness_func = "normalized_size_score"
 
 		self.system_type = None
 		self.search_vars = None
@@ -72,7 +72,11 @@ class PGE:
 
 		# do some conversions for string params to python objects
 		self.usable_funcs = expand.map_names_to_funcs(self.usable_funcs)
-		self.fitness_calc = fitness_funcs.get_fitness_calc(self.fitness_name)
+		# self.fitness_calc = fitness_funcs.get_fitness_calc(self.fitness_func)
+		print(self.fitness_func)
+
+		print("fitness: ", self.fitness_func_params)
+		self.fitness_calc = fitness_funcs.build_fitness_calc(self.fitness_func_params)
 
 
 		self.vars = sympy.symbols(self.usable_vars)
@@ -972,12 +976,12 @@ class PGE:
 			modl.improve_redchi = parent.redchi - modl.redchi
 		else:
 			# should probaly normalized this across the initial population and permenately set
-			modl.improve_score = modl.score
-			modl.improve_r2 = modl.r2
-			modl.improve_evar = modl.evar
-			modl.improve_aic = modl.aic
-			modl.improve_bic = modl.bic
-			modl.improve_redchi = modl.redchi
+			modl.improve_score  = -1.0 * modl.score
+			modl.improve_r2     = -1.0 * modl.r2
+			modl.improve_evar   = -1.0 * modl.evar
+			modl.improve_aic    = -1.0 * modl.aic
+			modl.improve_bic    = -1.0 * modl.bic
+			modl.improve_redchi = -1.0 * modl.redchi
 
 		modl.evaluated = True
 

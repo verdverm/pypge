@@ -36,9 +36,12 @@ algebra_methods: []
 init_depth: "low"
 expand_depth: "low"
 
-err_method: "mse"
-# fitness_func: "normalized_size_score"
-fitness_func: "normalized_size_score_Iredchi"
+err_method: "rmse"
+fitness_func_params:
+ - "normalize"
+ - "-sz"
+ - "-bic"
+ - "+(2.5)improve_bic"
 
 print_timing: True
 log_details: True

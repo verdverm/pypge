@@ -77,12 +77,12 @@ print("target:", target)
 ins = df[cols].as_matrix().T
 outs = df[target].values
 
-normOuts = outs / np.linalg.norm(outs)
+# normOuts = outs / np.linalg.norm(outs)
 
 
 print(ins.shape)
 print(outs.shape)
-print(normOuts.shape)
+# print(normOuts.shape)
 
 
 
@@ -129,7 +129,7 @@ print(pge)
 
 start = time.time()
 
-pge.fit(ins,normOuts)
+pge.fit(ins,outs)
 
 end = time.time()
 print("\n\nTotal Runtime: ", end - start, "seconds\n\n")

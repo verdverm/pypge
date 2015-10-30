@@ -2,127 +2,100 @@
 # they must take a list of models, this way we can have both
 #   fitness_funcs which operate on models independently
 #   and those which operate on all, such as calculating nomalized values
+from __future__ import print_function
 
 import numpy as np
 from deap import base, creator
 
 
-def get_fitness_calc(name):
-	if name == "size_score":
-		return size_score
-	elif name == "size_evar":
-		return size_evar
-	elif name == "size_r2":
-		return size_r2
-	elif name == "normed_size_score" or name == "normalized_size_score":
-		return normalized_size_score
-	elif name == "normed_size_evar" or name == "normalized_size_evar":
-		return normalized_size_evar
-	elif name == "normed_size_r2" or name == "normalized_size_r2":
-		return normalized_size_r2
+def build_fitness_calc(params):
+	print("fitness parameters: ", params)
+	norm = False
+	if "normalize" in params:
+		norm = True
+		params = [p for p in params if p != "normalize"]
 
-	elif name == "size_score_Iredchi":
-		return size_score_Iredchi
-	elif name == "normed_size_score_Iredchi" or name == "normalized_size_score_Iredchi":
-		return normalized_size_score_Iredchi
+	build_fitness_class(params)
+	extractor = build_value_extractor(params)
+
+	if norm:
+		return fitness_calc_norm(extractor)
 	else:
-		raise Exception("unknown fitness function")
+		return fitness_calc_raw(extractor)
 
+def fitness_calc_raw(extractor):
+	def calculator(models):
+		for modl in models:
+			vals = extractor(modl)
+			modl.fitness = creator.FitnessCalculator()
+			modl.fitness.setValues( vals )
+	return calculator
 
-
-##  size, score
-creator.create("FitnessMinMin", base.Fitness, weights=(-1.0, -1.0))
-creator.create("FitnessMinMax", base.Fitness, weights=(-1.0, 1.0))
-
-creator.create("FitnessMinMinMax", base.Fitness, weights=(-1.0, -1.0, 1.0))
-
-def size_score_Iredchi(models):
-	for modl in models:
-		vals = (modl.size(), modl.score, modl.improved_redchi)
-		modl.fitness = creator.FitnessMinMinMax()
-		modl.fitness.setValues( vals )
-
-def normalized_size_score_Iredchi(models):
-	sizes = np.zeros(len(models))
-	scores = np.zeros(len(models))
-	redchi = np.zeros(len(models))
-	for i,modl in enumerate(models):
-		sizes[i] = modl.size()
-		scores[i] = modl.score
-		redchi[i] = modl.improved_redchi
+def fitness_calc_norm(extractor):
+	def calculator(models):
 	
-	normSizes = sizes / np.linalg.norm(sizes)
-	normScores = scores / np.linalg.norm(scores)
-	normRedchi = redchi / np.linalg.norm(redchi)
+		vals = []
+		for modl in models:
+			vs = extractor(modl)
+			vals.append(vs)
 
-	for i,modl in enumerate(models):
-		vals = (normSizes[i], normScores[i], normRedchi[i])
-		modl.fitness = creator.FitnessMinMinMax()
-		modl.fitness.setValues( vals )
+		npvals = np.array(vals).T
 
+		normed = []
+		for col in npvals:
+			norm = col / np.linalg.norm(col)
+			normed.append(norm)
 
+		normd_vals = np.array(normed).T
 
-
-def size_score(models):
-	for modl in models:
-		vals = (modl.size(), modl.score)
-		modl.fitness = creator.FitnessMinMin()
-		modl.fitness.setValues( vals )
-
-def size_evar(models):
-	for modl in models:
-		vals = (modl.size(), modl.evar)
-		modl.fitness = creator.FitnessMinMin()
-		modl.fitness.setValues( vals )
-
-def size_r2(models):
-	for modl in models:
-		vals = (modl.size(), modl.r2)
-		modl.fitness = creator.FitnessMinMin()
-		modl.fitness.setValues( vals )
+		for i,modl in enumerate(models):
+			vals = tuple(normd_vals[i])
+			modl.fitness = creator.FitnessCalculator()
+			modl.fitness.setValues( vals )
 
 
-def normalized_size_score(models):
-	sizes = np.zeros(len(models))
-	scores = np.zeros(len(models))
-	for i,modl in enumerate(models):
-		sizes[i] = modl.size()
-		scores[i] = modl.score
+	return calculator
+
+
+def build_fitness_class(params):
+	weights = build_fitness_weights(params)
+	creator.create("FitnessCalculator", base.Fitness, weights=weights)
+
+def build_fitness_weights(params):
+	weights = []
+	for p in params:
+		W = 1.0
+		if "(" in p and ")" in p:
+			lp = p.index("(")
+			rp = p.index(")")
+			W = float(p[lp+1:rp])
+		if p[0] == "-":
+			weights.append(-1.0 * W)
+		elif p[0] == "+":
+			weights.append(1.0 * W)
+		else:
+			print("UNSIGNED FITNESS PARAMETER!!!")
+	print("weights: ", weights)
+	return tuple(weights)
+
+def build_value_extractor(params):
+	ps = []
+
+	for i,p in enumerate(params):
+		if ")" in p:
+			rp = p.index(")") + 1
+			params[i] = p[rp:]
+		else:
+			params[i] = p[1:]
+
+	ps = [p for p in params]
+	print("PS: ", ps)
 	
-	normSizes = sizes / np.linalg.norm(sizes)
-	normScores = scores / np.linalg.norm(scores)
 
-	for i,modl in enumerate(models):
-		vals = (normSizes[i], normScores[i])
-		modl.fitness = creator.FitnessMinMin()
-		modl.fitness.setValues( vals )
-
-def normalized_size_evar(models):
-	sizes = np.zeros(len(models))
-	scores = np.zeros(len(models))
-	for i,modl in enumerate(models):
-		sizes[i] = modl.size()
-		scores[i] = modl.evar
-	
-	normSizes = sizes / np.linalg.norm(sizes)
-	normScores = scores / np.linalg.norm(scores)
-
-	for i,modl in enumerate(models):
-		vals = (normSizes[i], normScores[i])
-		modl.fitness = creator.FitnessMinMax()
-		modl.fitness.setValues( vals )
-
-def normalized_size_r2(models):
-	sizes = np.zeros(len(models))
-	scores = np.zeros(len(models))
-	for i,modl in enumerate(models):
-		sizes[i] = modl.size()
-		scores[i] = modl.r2
-	
-	normSizes = sizes / np.linalg.norm(sizes)
-	normScores = scores / np.linalg.norm(scores)
-
-	for i,modl in enumerate(models):
-		vals = (normSizes[i], normScores[i])
-		modl.fitness = creator.FitnessMinMax()
-		modl.fitness.setValues( vals )
+	def extractor(modl):
+		vals = []
+		for p in ps:
+			v = getattr(modl, p)
+			vals.append(v)
+		return tuple(vals)
+	return extractor
