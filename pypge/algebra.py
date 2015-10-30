@@ -1,8 +1,10 @@
+from __future__ import print_function
+
 import sympy
 from sympy.strategies.tree import greedy, brute
 sympy.init_printing(use_unicode=True)
 
-import model
+from pypge import model
 
 #### Code below here was pulled from another project
 
@@ -29,8 +31,8 @@ def manip_model(modl, method):
 	if err is not None:
 		return None, err
 	if expr is None:
-		print "NONE: ", modl.expr, method, " to None"
-		print "  shouldn't get here [ algebra.manip_model() ]"
+		print("NONE: ", modl.expr, method, " to None")
+		print("  shouldn't get here [ algebra.manip_model() ]")
 		return None, None
 
 	if expr == modl.expr:

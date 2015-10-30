@@ -1,10 +1,10 @@
 import sympy
 C = sympy.Symbol('C')
-CS = [sympy.Symbol("C_"+str(i)) for i in range(32)]
+CS = [sympy.Symbol("C_"+str(i)) for i in range(64)]
 
 from lmfit import Parameters
 
-import evaluate
+from pypge import evaluate
 
 class Model:
 
@@ -52,9 +52,22 @@ class Model:
 		self.peek_score = None
 		self.peek_r2 = None
 		self.peek_evar = None
+
 		self.score = None
 		self.r2 = None
 		self.evar = None
+		self.chi2 = None
+		self.aic = None
+		self.bic = None
+
+		self.improve_score = None
+		self.improve_r2 = None
+		self.improve_evar = None
+		self.improve_chi2 = None
+		self.improve_aic = None
+		self.improve_bic = None
+
+
 		self.fitness = None
 
 		self.fit_result = None
@@ -80,9 +93,33 @@ class Model:
 		fs = "{:5d}:  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:s}"
 		return fs.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
 
+	def print_columns(self):
+		return "      id:  sz           error         r2    expld_vari    theModel"
+
+	def print_long_columns(self):
+		cols =  "      id    pid  sz           "
+		cols += "error         r2     expld_vari          aic              bic            redchi   |        "
+		cols += "I_error      I_r2    I_expld_vari        I_aic            I_bic          I_redchi        theModel"
+		return cols
+
+	def print_long(self):
+		if self.pretty is None:
+			self.pretty_expr()
+		fs = "{:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} | {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f}    {:s}"
+		return fs.format(self.id, self.parent_id, self.size(),
+			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
+			self.improve_score,self.improve_r2,self.improve_evar,self.improve_aic,self.improve_bic,self.improve_redchi,
+			self.pretty)
+
+	def print_csv(self):
+		if self.pretty is None:
+			self.pretty_expr()
+		fs = "{:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:s}"
+		return fs.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
+
 	def pretty_expr(self, float_format="%.6f"):
 		c_sub = [ (str(c), float_format % self.params[str(c)].value) for c in self.cs ]
-		self.pretty = self.expr.subs(c_sub)
+		self.pretty = str( self.expr.subs(c_sub) )
 		return self.pretty
 
 	def size(self):

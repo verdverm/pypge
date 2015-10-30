@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sympy
 sympy.init_printing(use_unicode=True)
 

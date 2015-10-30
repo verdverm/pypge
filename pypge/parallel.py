@@ -1,5 +1,6 @@
-import search
-import algebra
+from __future__ import print_function
+from pypge import search
+from pypge import algebra
 
 ## We ~can~ parallelize the following stages
 #
@@ -41,8 +42,8 @@ def unwrap_self_peek_model_queue(pge_instance):
 					'nfev': modl.fit_result.nfev
 				}
 				pge_instance.peek_out_queue.put( (pos, None, ret_data) )
-		except Exception, e:
-			print "breaking!", e, "\n  ", pos, modl.expr
+		except Exception as e:
+			print("breaking!", e, "\n  ", pos, modl.expr)
 			break
 
 ## FULL EVALUATION MULTIPROCESSING
@@ -68,8 +69,8 @@ def unwrap_self_eval_model_queue(pge_instance):
 					'nfev': modl.fit_result.nfev
 				}
 				pge_instance.eval_out_queue.put( (pos, None, ret_data) )
-		except Exception, e:
-			print "breaking!", e, "\n  ", pos, modl.expr
+		except Exception as e:
+			print("breaking!", e, "\n  ", pos, modl.expr)
 			break
 
 
@@ -92,6 +93,6 @@ def unwrap_self_alge_model_queue(pge_instance):
 
 
 				pge_instance.alge_out_queue.put( (pos, None, meth, alged) )
-		except Exception, e:
-			print "breaking!", e, "\n  ", pos, modl.expr
+		except Exception as e:
+			print("breaking!", e, "\n  ", pos, modl.expr)
 			break

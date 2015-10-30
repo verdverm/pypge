@@ -21,6 +21,8 @@ Change Log
 	This enables each phase to be timed and can include messages.
 5. Adds logging facilities
 	This enables output to be piped to several, configurable log files.
+6. Python 3 support
+
 
 
 #### Bug Fixes:

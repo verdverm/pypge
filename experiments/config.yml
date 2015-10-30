@@ -1,8 +1,12 @@
 name: "rose"
 
+# system_type: "diffeq"
+system_type: "explicit"
 
 workers: 1
-max_iter: 10
+queue_size: 4096
+
+max_iter: 20
 
 pop_count: 3
 peek_count: 12
@@ -16,21 +20,26 @@ max_depth: 6
 max_power: 5
 zero_epsilon: 0.000001
 
-system_type: "explicit"
+excluded_cols: []
+# excluded_cols:
+#  - "T"
+#  - "dx"
+#  - "dy"
 
-usable_funcs:
- - "sin"
- - "cos"
-
+usable_funcs: []
+# usable_funcs: 
+#  - "sin"
+#  - "cos"
+ 
 algebra_methods: []
 
 init_depth: "low"
 expand_depth: "low"
 
 err_method: "mse"
-fitness_func: "size_score"
+# fitness_func: "normalized_size_score"
+fitness_func: "normalized_size_score_Iredchi"
 
 print_timing: True
-
 log_details: True
 

@@ -1,6 +1,7 @@
+from __future__ import print_function
 from search import PGE
 
-import expand
+from pypge import expand
 
 from benchmarks import explicit 
 
@@ -18,6 +19,8 @@ import sympy
 #
 #
 #   Normalize metric values
+#
+#   Add random or brownian data to the analysis, should find nothing
 #
 #
 # - Ipython notebook examples
@@ -69,60 +72,69 @@ import sympy
 #   - domain alphabet
 #   - sub-expression frequencies in population
 #
+################
 #
+#   New stuff
 #
+#   - Eqn Relationships, subtree too
+#   - Different metrics for selection & search
+#   - Work around / outside of PGE algorithm (data handling, feature selection, PCA)
+#   - Python package with scikit-learn integration
+#   - More benchmarks, exploring limits
+#   - Memoization
+
 
 import time
 
 def main():
-	print "hello pypge!\n"
+	print("hello pypge!\n")
 
 	start = time.time()
 
-	# prob = explicit.Nguyen_12(0.1)
+	prob = explicit.Koza_01()
 	# print prob['name'] + ":  ", prob['eqn'], "\n"
-
-	# pge = PGE(
-	# 	system_type = "explicit",
-	# 	search_vars = "y",
-	# 	usable_vars = prob['xs_str'],
-	# 	# usable_funcs = expand.BASIC_BASE,
-	# 	pop_count = 3,
-	# 	peek_count = 20,
-	# 	algebra_methods = None,
-	# 	max_iter = 10,
-	# 	workers = 2,
-	# 	print_timing = True
-	# 	)
-
-	# pge.fit(prob['xpts'], prob['ypts'])
-
-
-
-	df = pandas.read_csv("~/Downloads/dataset4.csv", header=None, names=["m", "l", "n", "s", "y"], delim_whitespace=True)
-	ins = numpy.array([df['m'].values, df['l'].values, df['n'].values, df['s'].values])
-	outs = df['y'].values
 
 	pge = PGE(
 		system_type = "explicit",
 		search_vars = "y",
-		usable_vars = "m l n s",
-		#usable_funcs = (log, sin, cos, exp, tan),
-		usable_funcs = [sympy.sin, sympy.cos],
-		# usable_funcs = expand.BASIC_BASE,
-		algebra_methods = None,
+		usable_vars = prob['xs_str'],
+		usable_funcs = [],
 		pop_count = 3,
-		peek_count = 20,
-		max_iter = 30,
-		workers = 2,
-		print_timing = True
+		peek_npts = 0,
+		algebra_methods = None,
+		max_iter = 12,
+		workers = 1,
+		print_timing = True,
+		log_details = True
 		)
 
-	pge.fit(ins, outs)
+	pge.fit(prob['xpts'], prob['ypure'])
+
+
+
+	# df = pandas.read_csv("~/Downloads/dataset4.csv", header=None, names=["m", "l", "n", "s", "y"], delim_whitespace=True)
+	# ins = numpy.array([df['m'].values, df['l'].values, df['n'].values, df['s'].values])
+	# outs = df['y'].values
+
+	# pge = PGE(
+	# 	system_type = "explicit",
+	# 	search_vars = "y",
+	# 	usable_vars = "m l n s",
+	# 	#usable_funcs = (log, sin, cos, exp, tan),
+	# 	usable_funcs = [sympy.sin, sympy.cos],
+	# 	algebra_methods = None,
+	# 	pop_count = 3,
+	# 	peek_count = 20,
+	# 	max_iter = 30,
+	# 	workers = 2,
+	# 	print_timing = True
+	# 	)
+
+	# pge.fit(ins, outs)
 
 
 	end = time.time()
-	print "\n\nTotal Runtime: ", end - start, "seconds\n\n"
+	print("\n\nTotal Runtime: ", end - start, "seconds\n\n")
 
 
 main()

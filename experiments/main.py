@@ -1,9 +1,12 @@
+from __future__ import print_function
+
 import sys, os, time
 
 import argparse
 import yaml
 
 import pandas as pd
+import numpy as np
 
 
 # 0. Setup CLI args
@@ -12,12 +15,14 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-t", "--timing", help="output timing details", action="store_true")
 
-depth_choices = ["low","med","high"]
-parser.add_argument("--init_depth", help="complexity of initial models", choices=depth_choices)
-parser.add_argument("--expand_depth", help="complexity of model expansion", choices=depth_choices)
+func_choices = ["linear","nonlin"]
+level_choices = ["low","med","high"]
+parser.add_argument("--func_level", help="complexity of initial models", choices=func_choices)
+parser.add_argument("--init_level", help="complexity of initial models", choices=level_choices)
+parser.add_argument("--grow_level", help="complexity of model expansion", choices=level_choices)
+parser.add_argument("--target", help="target variable to regress")
+# parser.add_argument("--iterations", help="number of iterations to run the search for")
 
-
-parser.add_argument("--target", help="the target variable")
 
 parser.add_argument("config", help="a YAML configuration file")
 parser.add_argument("input", help="input data file [csv,json]")
@@ -34,27 +39,28 @@ args = parser.parse_args()
 cf = open(args.config, "r")
 config = yaml.load(cf)
 cf.close()
-print config
+print(config)
 
 # 1a. override config with args
 # -----------------------
-if args.init_depth is not None:
-	config["init_depth"] = args.init_depth
-if args.expand_depth is not None:
-	config["expand_depth"] = args.expand_depth
+if args.func_level is not None:
+	config["func_level"] = args.func_level
+if args.init_level is not None:
+	config["init_level"] = args.init_level
+if args.grow_level is not None:
+	config["grow_level"] = args.grow_level
 
 
 # 2. read and setup data
 # -----------------------
 df = None
-if args.input[-5:] == ".json":
-	df = pd.read_json(args.input)
-elif args.input[-4:] == ".csv":
-	df = pd.read_csv(args.input)
+if args.input[-4:] == ".csv":
+	df = pd.read_csv(args.input, skipinitialspace=True)
 else:
-	print "Unknown input data file type"
+	print("Unknown input data file type")
 
 # print df.columns
+
 
 target = df.columns[-1]
 if args.target is not None:
@@ -63,16 +69,20 @@ if args.target is not None:
 	else:
 		sys.exit("target not found") 
 
-cols = [col for col in df.columns if col != target]
+cols = [col for col in df.columns if not (col == target or col in config["excluded_cols"])]
 
-print "ins:", cols
-print "target:", target
+print("ins:", cols)
+print("target:", target)
 
 ins = df[cols].as_matrix().T
 outs = df[target].values
 
-print ins.shape
-print outs.shape
+normOuts = outs / np.linalg.norm(outs)
+
+
+print(ins.shape)
+print(outs.shape)
+print(normOuts.shape)
 
 
 
@@ -96,23 +106,18 @@ from pypge import expand
 from pypge import fitness_funcs as FF
 import sympy
 
+
 pge = PGE(
-    system_type = config["system_type"],
     search_vars = target,
     usable_vars = cols,
-    # usable_funcs = [sympy.exp, sympy.cos, sympy.sin, sympy.Abs],
-    init_depth = config["init_depth"],
-    expand_depth = config["expand_depth"],
-    algebra_methods = config["algebra_methods"],
-    pop_count = config["pop_count"],
-    peek_count = config["peek_count"],
-    peek_npts = config["peek_npts"],
-    max_iter = config["max_iter"],
-    print_timing = config["print_timing"],
-    log_details = config["log_details"],
     log_dir=directory,
-    fitness_func = FF.normalized_size_score
+
+    ## unpack config values
+    **config
 )
+
+
+print(pge)
 
 
 # sys.exit("DEVELOPER ROAD BLOCK")
@@ -124,7 +129,7 @@ pge = PGE(
 
 start = time.time()
 
-pge.fit(ins,outs)
+pge.fit(ins,normOuts)
 
 end = time.time()
-print "\n\nTotal Runtime: ", end - start, "seconds\n\n"
+print("\n\nTotal Runtime: ", end - start, "seconds\n\n")

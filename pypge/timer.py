@@ -15,14 +15,16 @@ class timewith():
         self.last = self.curr
         self.curr = time.time()
         if nitems == 0:
-            print '     {:14.8f} seconds'.format(self.elapsed)
+            return ('     {:14.8f} seconds'.format(self.elapsed) )
         else:
-            print '     {:14.8f} seconds, {:14.8f} per item'.format(self.elapsed, self.elapsed / nitems)
+            return ('     {:14.8f} seconds  {:14.8f} per item'.format(self.elapsed, self.elapsed / nitems) )
+
+    def finalize(self):
+        self.curr = time.time()
+        return ('     {:14.4f} seconds'.format(self.curr - self.start))
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.curr = time.time()
-        print '  TOTAL {:14.3f} seconds'.format(self.curr - self.start)
         pass
