@@ -3,7 +3,7 @@
 probs=(
 	# koza_01
 	# koza_02
-	# koza_03
+	koza_03
 	# lipson_01
 	# lipson_02
 	# lipson_03
@@ -19,7 +19,7 @@ probs=(
 	# nguyen_09
 	# nguyen_10
 	# nguyen_11
-	nguyen_12
+	# nguyen_12
 
 	# korns_01
 	# korns_02
@@ -65,8 +65,8 @@ probs=(
 )
 
 noise=(
-	# "clean"
-	"noisy"
+	"clean"
+	# "noisy"
 )
 
 func_levels=(

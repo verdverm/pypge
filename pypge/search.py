@@ -976,12 +976,12 @@ class PGE:
 			modl.improve_redchi = parent.redchi - modl.redchi
 		else:
 			# should probaly normalized this across the initial population and permenately set
-			modl.improve_score  = -1.0 * modl.score
-			modl.improve_r2     = -1.0 * modl.r2
-			modl.improve_evar   = -1.0 * modl.evar
-			modl.improve_aic    = -1.0 * modl.aic
-			modl.improve_bic    = -1.0 * modl.bic
-			modl.improve_redchi = -1.0 * modl.redchi
+			modl.improve_score  = -0.000001 * modl.score
+			modl.improve_r2     = -0.000001 * modl.r2
+			modl.improve_evar   = -0.000001 * modl.evar
+			modl.improve_aic    = -0.000001 * modl.aic
+			modl.improve_bic    = -0.000001 * modl.bic
+			modl.improve_redchi = -0.000001 * modl.redchi
 
 		modl.evaluated = True
 

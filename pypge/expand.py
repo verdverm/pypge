@@ -4,7 +4,10 @@ from __future__ import division
 import sympy
 sympy.init_printing(use_unicode=True)
 
-from itertools import combinations, combinations_with_replacement as combos
+from itertools import (
+	combinations as combos_woutR, 
+	combinations_with_replacement as combos_withR
+)
 
 from pypge import filters
 from pypge import model
@@ -93,9 +96,9 @@ class Grower:
 
 
 		self.wout_c_xs1_muls = [ x for x in self.xs_pow1 ]
-		self.wout_c_xs2_muls = [ tpl[0] * tpl[1] for tpl in combos(self.xs_pow1, 2)] + self.wout_c_xs1_muls
-		self.wout_c_xs3_muls = [ tpl[0] * tpl[1] * tpl[2] for tpl in combos(self.xs_pow1, 3)]
-		self.wout_c_xs4_muls = [ tpl[0] * tpl[1] * tpl[2] * tpl[3] for tpl in combos(self.xs_pow1, 4)] + self.wout_c_xs3_muls
+		self.wout_c_xs2_muls = [ tpl[0] * tpl[1] for tpl in combos_withR(self.xs_pow1, 2)] + self.wout_c_xs1_muls
+		self.wout_c_xs3_muls = [ tpl[0] * tpl[1] * tpl[2] for tpl in combos_withR(self.xs_pow1, 3)]
+		self.wout_c_xs4_muls = [ tpl[0] * tpl[1] * tpl[2] * tpl[3] for tpl in combos_withR(self.xs_pow1, 4)] + self.wout_c_xs3_muls
 		self.with_c_xs1_muls = [ C * m for m in self.wout_c_xs1_muls ]
 		self.with_c_xs2_muls = [ C * m for m in self.wout_c_xs2_muls ]
 		self.with_c_xs3_muls = [ C * m for m in self.wout_c_xs3_muls ]
@@ -115,10 +118,10 @@ class Grower:
 		self.with_c_linear_funcs = []
 		self.with_c_nonlin_funcs = []
 		if funcs is not None:
-			self.wout_c_linear_funcs = [ f(x) for f in funcs for x in self.xs_pow1]
-			self.wout_c_nonlin_funcs = [ f(C*x+C) for f in funcs for x in self.xs_pow1]
-			self.with_c_linear_funcs = [ C*f(x) for f in funcs for x in self.xs_pow1]
-			self.with_c_nonlin_funcs = [ C*f(C*x+C) for f in funcs for x in self.xs_pow1]
+			self.wout_c_linear_funcs = [ f(x) for f in funcs for x in self.wout_c_xs1_muls]
+			self.wout_c_nonlin_funcs = [ f(C*x+C) for f in funcs for x in self.wout_c_xs1_muls]
+			self.with_c_linear_funcs = [ C*f(x) for f in funcs for x in self.wout_c_xs1_muls]
+			self.with_c_nonlin_funcs = [ C*f(C*x+C) for f in funcs for x in self.wout_c_xs1_muls]
 
 		# print("wout_c_linear_funcs", self.wout_c_linear_funcs)
 		# print("wout_c_nonlin_funcs", self.wout_c_nonlin_funcs)
@@ -167,27 +170,25 @@ class Grower:
 			print("UNKNOWN INIT_LEVEL!!")
 			return
 
-		# print("mul_exprs: ", mul_exprs)
+		print("mul_exprs: ", len(mul_exprs))
 
-		mid_exprs = mul_exprs + self.with_c_func_exprs
-		# print("mid_exprs: ", mid_exprs)
-		add_exprs = [ tpl[0] + tpl[1] for tpl in combinations(mid_exprs, 2)]
+		mid_exprs = mul_exprs
+		print("mid_exprs: ", len(mid_exprs))
+		add_exprs = [ tpl[0] + tpl[1] for tpl in combos_woutR(mid_exprs, 2)]
 		if self.init_level == "high":
-			add_exprs += [ tpl[0] + tpl[1] + tpl[2] for tpl in combinations(mid_exprs, 3)]
+			add_exprs += [ tpl[0] + tpl[1] + tpl[2] for tpl in combos_woutR(mid_exprs, 3)]
+		print("add_exprs: ", len(add_exprs))
 
-		# print("add_exprs: ", mid_exprs)
-		exprs_set = mid_exprs + add_exprs
+		exprs_set = mid_exprs + add_exprs + self.with_c_func_exprs
+		print("exprs_set: ", len(exprs_set))
 
 		# always add the plus C
 		plus_C_exprs = [ sympy.Add( expr, C ) for expr in exprs_set]
 		ret_exprs = exprs_set + plus_C_exprs
+		print("ret_exprs", len(ret_exprs))
 
 		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in ret_exprs:
-			s = p.evalf()
-			pass_set.add(s)
-		ret_exprs = list(pass_set)
+		ret_exprs = self._uniquify(ret_exprs)
 
 		models = [model.Model(e, xs=self.xs) for e in ret_exprs]
 		for m in models:
@@ -218,11 +219,7 @@ class Grower:
 		else:
 			print("UNKNOWN SUBS_LEVEL!!")
 
-		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in self.var_sub_terms:
-			pass_set.add(p)
-		self.var_sub_terms = list(pass_set)
+		self.var_sub_terms = self._uniquify(self.var_sub_terms)
 
 
 	def init_add_extends(self):
@@ -237,11 +234,7 @@ class Grower:
 		else:
 			print("UNKNOWN EXTEND_LEVEL!!")
 
-		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in self.add_extend_terms:
-			pass_set.add(p)
-		self.add_extend_terms = list(pass_set)
+		self.add_extend_terms = self._uniquify(self.add_extend_terms)
 
 	def init_mul_extends(self):
 
@@ -255,11 +248,7 @@ class Grower:
 		else:
 			print("UNKNOWN EXTEND_LEVEL!!")
 
-		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in self.mul_extend_terms:
-			pass_set.add(p)
-		self.mul_extend_terms = list(pass_set)
+		self.mul_extend_terms = self._uniquify(self.mul_extend_terms)
 
 
 
@@ -269,6 +258,13 @@ class Grower:
 		var_expands = self._var_sub(M.orig)
 		add_expands = self._add_extend(M.orig)
 		mul_expands = self._mul_extend(M.orig)
+		var_expands_C = [ self._toggle_plus_C(e) for e in var_expands ]
+		add_expands_C = [ self._toggle_plus_C(e) for e in add_expands ]
+		mul_expands_C = [ self._toggle_plus_C(e) for e in mul_expands ]
+
+		var_expands = self._uniquify(var_expands + var_expands_C)
+		add_expands = self._uniquify(add_expands + add_expands_C)
+		mul_expands = self._uniquify(mul_expands + mul_expands_C)
 
 		var_models = [model.Model(e, p_id=M.id, reln="var_xpnd") for e in var_expands if e != C]
 		add_models = [model.Model(e, p_id=M.id, reln="add_xpnd") for e in add_expands if e != C]
@@ -327,16 +323,9 @@ class Grower:
 				tmp = expr.func(*args)
 				new_exprs.append(tmp)
 
-		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in new_exprs:
-			s = p.evalf()
-			pass_set.add(s)
-		new_exprs = list(pass_set)
+		ret_exprs = self._uniquify(new_exprs)
+		return ret_exprs
 
-		return new_exprs
-
-		# if e.is_Symbol and e in self.xs:
 		
 
 	def _add_extend(self, expr):
@@ -382,14 +371,10 @@ class Grower:
 				tmp = expr.func(*args)
 				new_exprs.append(tmp)
 
-		## UNIQUIFY THE RESULTS
-		pass_set = set()
-		for p in new_exprs:
-			s = p.evalf()
-			pass_set.add(s)
-		new_exprs = list(pass_set)
+		ret_exprs = self._uniquify(new_exprs)
+		return ret_exprs
 
-		return new_exprs
+
 
 	def _mul_extend(self, expr):
 		new_exprs = []
@@ -425,14 +410,36 @@ class Grower:
 				tmp = expr.func(*args)
 				new_exprs.append(tmp)
 
+		
+		ret_exprs = self._uniquify(new_exprs)
+		return ret_exprs
+
+
+
+	def _uniquify(self,exprs):
 		## UNIQUIFY THE RESULTS
 		pass_set = set()
-		for p in new_exprs:
+		for p in exprs:
 			s = p.evalf()
 			pass_set.add(s)
-		new_exprs = list(pass_set)
+		return list(pass_set)
 
-		return new_exprs
+
+	def _toggle_plus_C(self, expr):
+		if expr.is_Add:
+			hasC = False
+			for e in expr.args:
+				if e == C:
+					hasC = True
+					break
+			if not hasC:
+				return expr + C
+			else:
+				args = [e for e in expr.args if e != C]
+				args = tuple(args)
+				return expr.func(*args)
+		else:
+			return sympy.Add(expr, C)
 
 
 

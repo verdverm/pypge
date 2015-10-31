@@ -133,6 +133,8 @@ class Model:
 			if e.is_Integer:
 				i += int(abs(e))
 				continue
+			if e.is_Function:
+				i += 2  # add an extra penalty
 			i+=1
 		return i
 

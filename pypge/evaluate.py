@@ -5,7 +5,6 @@ import sympy
 import numpy as np
 
 from lmfit import minimize, Parameters
-
 from sklearn import metrics
 
 
