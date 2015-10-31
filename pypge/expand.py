@@ -256,21 +256,26 @@ class Grower:
 	def grow(self, M):
 
 		var_expands = self._var_sub(M.orig)
+		add_biggers = self._add_extend_top_level(M.orig)
 		add_expands = self._add_extend(M.orig)
 		mul_expands = self._mul_extend(M.orig)
+
 		var_expands_C = [ self._toggle_plus_C(e) for e in var_expands ]
+		add_biggers_C = [ self._toggle_plus_C(e) for e in add_biggers ]
 		add_expands_C = [ self._toggle_plus_C(e) for e in add_expands ]
 		mul_expands_C = [ self._toggle_plus_C(e) for e in mul_expands ]
 
 		var_expands = self._uniquify(var_expands + var_expands_C)
+		add_biggers = self._uniquify(add_biggers + add_biggers_C)
 		add_expands = self._uniquify(add_expands + add_expands_C)
 		mul_expands = self._uniquify(mul_expands + mul_expands_C)
 
 		var_models = [model.Model(e, p_id=M.id, reln="var_xpnd") for e in var_expands if e != C]
+		big_models = [model.Model(e, p_id=M.id, reln="add_bigr") for e in add_biggers if e != C]
 		add_models = [model.Model(e, p_id=M.id, reln="add_xpnd") for e in add_expands if e != C]
 		mul_models = [model.Model(e, p_id=M.id, reln="mul_xpnd") for e in mul_expands if e != C]
 
-		models = var_models + add_models + mul_models
+		models = var_models + big_models + add_models + mul_models
 		return models
 
 
@@ -326,7 +331,39 @@ class Grower:
 		ret_exprs = self._uniquify(new_exprs)
 		return ret_exprs
 
-		
+	
+
+	def _add_extend_top_level(self, expr):
+		"""
+		this only extends a top-level addition, but in a more complex way with _mul_extend. NO recursion!
+		For each term in the addition, we do all possible mul_expands, and then append to the full Add.
+		This will likely create lots of duplicate, need to check on simplification, or at least grouping terms
+		"""
+		if expr.is_Add:
+			new_terms = []
+
+			for e in expr.args:
+				if e.is_Mul:
+					for term in self.mul_extend_terms:
+						cloned_args = list(e.args)
+						cloned_args.append(term)
+						new_mul = e.func(*cloned_args)
+						new_terms.append(new_mul)
+
+			new_exprs = []
+			for term in new_terms:
+				cloned_args = list(expr.args)
+				cloned_args.append(term)
+				bigger_add = expr.func(*cloned_args)
+				new_exprs.append(bigger_add)
+
+			ret_exprs = self._uniquify(new_exprs)
+			return ret_exprs
+
+		else:
+			return []
+
+
 
 	def _add_extend(self, expr):
 		new_exprs = []
@@ -382,7 +419,7 @@ class Grower:
 		if not expr.is_Atom:
 			args_sets = []
 			# however we have 2 cases here (as opposed to _var_sub)
-			# 1. extend this expression if it's an Add
+			# 1. extend this expression if it's a Mul
 			if expr.is_Mul:
 				for term in self.mul_extend_terms:
 					cloned_args = list(expr.args)

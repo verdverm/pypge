@@ -501,7 +501,7 @@ class PGE:
 
 
 	def print_final_models(self, model_list, count, file=sys.stdout):
-		print ("id,   sz,           error,         r2,    expld_vari,    theModel", file=file)
+		print (model_list[0][0].print_csv_columns(), file=file)
 
 		cnt = 0
 		for front in model_list:
@@ -528,7 +528,7 @@ class PGE:
 
 		# print first 4 pareto fronts
 		print ("Final Results")
-		print ("      id:  sz           error         r2    expld_vari    theModel")
+		print (final_list[0][0].print_columns())
 		print ("-----------------------------------------------------------------------------------")
 		for front in final_list[:nfronts]:
 			for m in front:

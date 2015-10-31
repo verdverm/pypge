@@ -90,11 +90,15 @@ class Model:
 	def __str__(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d}:  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:s}"
-		return fs.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
+		fs = "{:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} |  {:s}"
+		return fs.format(self.id, self.parent_id, self.size(),
+			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
+			self.pretty)
 
 	def print_columns(self):
-		return "      id:  sz           error         r2    expld_vari    theModel"
+		cols =  "      id    pid  sz           "
+		cols += "error         r2     expld_vari          aic              bic            redchi   |      theModel"
+		return cols
 
 	def print_long_columns(self):
 		cols =  "      id    pid  sz           "
@@ -114,8 +118,15 @@ class Model:
 	def print_csv(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:s}"
-		return fs.format(self.id, self.size(),self.score,self.r2,self.evar,self.pretty)
+		fs = "{:5d},  {:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:15.6f},  {:15.6f},  {:15.6f},  {:s}"
+		return fs.format(self.id, self.parent_id, self.size(),
+			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
+			self.pretty)
+
+	def print_csv_columns(self):
+		cols =  "   id,    pid,  sz,          "
+		cols += "error,        r2,       evar,          aic,             bic,          redchi,         theModel"
+		return cols
 
 	def pretty_expr(self, float_format="%.6f"):
 		c_sub = [ (str(c), float_format % self.params[str(c)].value) for c in self.cs ]

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 probs=(
-	# koza_01
+	koza_01
 	# koza_02
-	koza_03
+	# koza_03
 	# lipson_01
 	# lipson_02
 	# lipson_03
