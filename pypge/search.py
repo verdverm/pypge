@@ -58,16 +58,31 @@ class PGE:
 		self.init_level = "low"
 		self.grow_level = "low"
 
+		self.grow_params = {
+			"func_level": "linear",
+			"init_level": "low",
+			"grow_level": "low",
+			"subs_level": "med",
+			"add_extend_level": "low",
+			"mul_extend_level": "low",
+		}
+
 		self.print_timing = False
 		self.log_details = False
 		self.log_dir = "./logs/"
 
 
+		# --------------------
+		# --------------------
 		# override with kwargs
+		# --------------------
 		# --------------------
 		for key, value in kwargs.items():
 			# print (key, value)
 			setattr(self, key, value)
+		# --------------------
+		# --------------------
+		# --------------------
 		# --------------------
 
 		# do some conversions for string params to python objects
@@ -131,8 +146,9 @@ class PGE:
 
 		# memoizer & grower
 		self.memoizer = memoize.Memoizer(self.vars)
-		self.grower = expand.Grower(self.vars, self.usable_funcs, 
-			func_level=self.func_level, init_level=self.init_level, grow_level=self.grow_level)
+		self.grower = expand.Grower(self.vars, self.usable_funcs, **self.grow_params)
+		# self.grower = expand.Grower(self.vars, self.usable_funcs, 
+		# 	func_level=self.func_level, init_level=self.init_level, grow_level=self.grow_level)
 
 		# Pareto Front stuff
 		self.nsga2_peek = []

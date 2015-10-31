@@ -64,12 +64,12 @@ class Grower:
 		# policy configs
 		self.func_level = "linear"     # [linear,nonlin]
 		self.init_level = "low"     # [low,med,high]
-		self.subs_level = "low"     # [low,med,high]
 
 		# do grow_level this way so we can override the individual ones if we want
 		self.grow_level = kwargs.get("grow_level", "low")   # [low,med,high]
-		self.add_extend_level = self.grow_level               # [low,med,high]
-		self.mul_extend_level = self.grow_level               # [low,med,high]
+		self.subs_level = self.grow_level     				# [low,med,high]
+		self.adds_level = self.grow_level               	# [low,med,high]
+		self.muls_level = self.grow_level               	# [low,med,high]
 
 				# override with kwargs
 		# --------------------
@@ -80,9 +80,12 @@ class Grower:
 
 		print("xs: ", self.xs)
 		print("funcs: ", self.funcs)
-		print("f_lvl:", self.func_level)
-		print("i_lvl:", self.init_level)
-		print("g_lvl:", self.grow_level)
+		print("func_lvl:", self.func_level)
+		print("init_lvl:", self.init_level)
+		print("grow_lvl:", self.grow_level)
+		print("subs_lvl:", self.subs_level)
+		print("adds_lvl:", self.adds_level)
+		print("muls_lvl:", self.muls_level)
 
 		self.xs_pow1 = [x**(n*(p+1)) for p in range(1) for n in [-1,1] for x in xs]
 		self.xs_pow2 = [x**(n*(p+1)) for p in range(2) for n in [-1,1] for x in xs]
@@ -209,46 +212,55 @@ class Grower:
 			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
 
 		elif self.subs_level == "med":
-			self.var_sub_lim_terms = self.wout_c_xs2_muls
-			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs + add_terms
+			self.var_sub_lim_terms = self.wout_c_xs2_muls + add_terms
+			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
 
 		elif self.subs_level == "high":
 			self.var_sub_lim_terms = self.wout_c_xs3_muls + add_terms
-			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs + add_terms
+			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
 
 		else:
 			print("UNKNOWN SUBS_LEVEL!!")
 
 		self.var_sub_terms = self._uniquify(self.var_sub_terms)
+		self.var_sub_lim_terms = self._uniquify(self.var_sub_lim_terms)
 
 
 	def init_add_extends(self):
 
-		if self.add_extend_level == "low":
+		if self.adds_level == "low":
+			self.add_extend_lim_terms = self.with_c_xs1_muls
 			self.add_extend_terms = self.with_c_xs1_muls + self.with_c_func_exprs
-		elif self.add_extend_level == "med":
+		elif self.adds_level == "med":
+			self.add_extend_lim_terms = self.with_c_xs2_muls
 			self.add_extend_terms = self.with_c_xs2_muls + self.with_c_func_exprs
-		elif self.add_extend_level == "high":
+		elif self.adds_level == "high":
+			self.add_extend_lim_terms = self.with_c_xs2_muls
 			cross = [x*f for f in self.with_c_func_exprs for x in self.with_c_xs1_muls]
 			self.add_extend_terms = self.with_c_xs2_muls + self.with_c_func_exprs + cross
 		else:
 			print("UNKNOWN EXTEND_LEVEL!!")
 
 		self.add_extend_terms = self._uniquify(self.add_extend_terms)
+		self.add_extend_lim_terms = self._uniquify(self.add_extend_lim_terms)
 
 	def init_mul_extends(self):
 
-		if self.mul_extend_level == "low":
+		if self.muls_level == "low":
+			self.mul_extend_lim_terms = self.wout_c_xs1_muls
 			self.mul_extend_terms = self.wout_c_xs1_muls + self.wout_c_func_exprs
-		elif self.mul_extend_level == "med":
+		elif self.muls_level == "med":
+			self.mul_extend_lim_terms = self.wout_c_xs2_muls
 			self.mul_extend_terms = self.wout_c_xs2_muls + self.wout_c_func_exprs
-		elif self.mul_extend_level == "high":
+		elif self.muls_level == "high":
+			self.mul_extend_lim_terms = self.wout_c_xs2_muls
 			cross = [x*f for f in self.wout_c_func_exprs for x in self.wout_c_xs1_muls]
 			self.mul_extend_terms = self.wout_c_xs2_muls + self.wout_c_func_exprs + cross
 		else:
 			print("UNKNOWN EXTEND_LEVEL!!")
 
 		self.mul_extend_terms = self._uniquify(self.mul_extend_terms)
+		self.mul_extend_lim_terms = self._uniquify(self.mul_extend_lim_terms)
 
 
 
@@ -365,7 +377,7 @@ class Grower:
 
 
 
-	def _add_extend(self, expr):
+	def _add_extend(self, expr, limit_sub=False):
 		new_exprs = []
 		# only worry about non-atoms, cause we extend args
 		if not expr.is_Atom:
@@ -373,7 +385,10 @@ class Grower:
 			# however we have 2 cases here (as opposed to _var_sub)
 			# 1. extend this expression if it's an Add
 			if expr.is_Add:
-				for term in self.add_extend_terms:
+				sub_terms = self.add_extend_terms
+				if limit_sub:
+					sub_terms = self.add_extend_lim_terms
+				for term in sub_terms:
 					# has_match skips extending an add with a term that is already present 
 					has_match = False
 					for e in expr.args:
@@ -390,7 +405,8 @@ class Grower:
 			# 2. do the recursion
 			for i,e in enumerate(expr.args):
 				if not e.is_Atom:
-					ee = self._add_extend(e)
+					lim_sub = limit_sub or not (e.is_Add or e.is_Mul)
+					ee = self._add_extend(e,limit_sub=lim_sub)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
 						for vs in ee:
@@ -413,7 +429,7 @@ class Grower:
 
 
 
-	def _mul_extend(self, expr):
+	def _mul_extend(self, expr, limit_sub=False):
 		new_exprs = []
 		# only worry about non-atoms, cause we extend args
 		if not expr.is_Atom:
@@ -421,7 +437,10 @@ class Grower:
 			# however we have 2 cases here (as opposed to _var_sub)
 			# 1. extend this expression if it's a Mul
 			if expr.is_Mul:
-				for term in self.mul_extend_terms:
+				sub_terms = self.mul_extend_terms
+				if limit_sub:
+					sub_terms = self.mul_extend_lim_terms
+				for term in sub_terms:
 					cloned_args = list(expr.args)
 					cloned_args.append(term)
 					args_sets.append(cloned_args)
@@ -429,7 +448,8 @@ class Grower:
 			# 2. do the recursion
 			for i,e in enumerate(expr.args):
 				if not e.is_Atom:
-					ee = self._mul_extend(e)
+					lim_sub = limit_sub or not (e.is_Add or e.is_Mul)
+					ee = self._mul_extend(e,limit_sub=lim_sub)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
 						for vs in ee:
