@@ -20,20 +20,20 @@ from pypge import algebra
 
 
 ## PEEK EVALUATION MULTIPROCESSING
-def unwrap_self_peek_model_queue(pge_instance):
+def unwrap_self_peek_model_queue(PGE):
 	pos, modl = -1, None
 	while True:
 		try:
-			val = pge_instance.peek_in_queue.get()
+			val = PGE.peek_in_queue.get()
 			if val is None:
 				print("Val None Breaking Peek Processor")
 				break;
 			pos = val[0]
 			modl = val[1]
 
-			passed = evaluate.PGE.peek_model(pge_instance, modl)
+			passed = evaluate.peek_model(modl, PGE.vars, PGE.X_peek, PGE.Y_peek, PGE.err_method)
 			if not passed:
-				pge_instance.peek_out_queue.put( (pos, modl.error, modl.exception) )
+				PGE.peek_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
 				vals = [ (k,v) for (k,v) in modl.params.valuesdict().items() ]
 				ret_data = {
@@ -47,7 +47,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 					'params': vals,
 					'nfev': modl.fit_result.nfev
 				}
-				pge_instance.peek_out_queue.put( (pos, None, ret_data) )
+				PGE.peek_out_queue.put( (pos, None, ret_data) )
 
 		except Exception as e:
 			print("peek breaking!", e, "\n  ", pos, modl.expr, val)
@@ -55,10 +55,10 @@ def unwrap_self_peek_model_queue(pge_instance):
 
 
 ## FULL EVALUATION MULTIPROCESSING
-def unwrap_self_eval_model_queue(pge_instance):
+def unwrap_self_eval_model_queue(PGE):
 	while True:
 		try:
-			val = pge_instance.eval_in_queue.get()
+			val = PGE.eval_in_queue.get()
 			if val is None:
 				print("Val None Breaking Eval Processor")
 				break;
@@ -66,9 +66,9 @@ def unwrap_self_eval_model_queue(pge_instance):
 			modl = val[1]
 
 			passed = False
-			passed = evaluate.PGE.eval_model(pge_instance, modl)
+			passed = evaluate.eval_model(modl, PGE.vars, PGE.X_train, PGE.Y_train, PGE.err_method)
 			if not passed:
-				pge_instance.eval_out_queue.put( (pos, modl.error, modl.exception) )
+				PGE.eval_out_queue.put( (pos, modl.error, modl.exception) )
 
 			else:
 				vals = [ (k,v) for (k,v) in modl.params.valuesdict().items() ]
@@ -85,7 +85,7 @@ def unwrap_self_eval_model_queue(pge_instance):
 					'nfev': modl.fit_result.nfev
 				}
 			
-				pge_instance.eval_out_queue.put( (pos, None, ret_data) )
+				PGE.eval_out_queue.put( (pos, None, ret_data) )
 
 		except Exception as e:
 			print("eval breaking!", e, "\n  ", pos, modl.expr, passed, modl.params.valuesdict())
@@ -93,10 +93,10 @@ def unwrap_self_eval_model_queue(pge_instance):
 
 
 ## ALGEBRA MULTIPROCESSING
-def unwrap_self_alge_model_queue(pge_instance):
+def unwrap_self_alge_model_queue(PGE):
 	while True:
 		try:
-			val = pge_instance.alge_in_queue.get()
+			val = PGE.alge_in_queue.get()
 			if val is None:
 				print("Val None Breaking Algebra Processor")
 				break;
@@ -107,11 +107,11 @@ def unwrap_self_alge_model_queue(pge_instance):
 
 			alged, err = algebra.manip_model(modl, meth)
 			if err is not None:
-				pge_instance.alge_out_queue.put( (pos, err, None, None) )
+				PGE.alge_out_queue.put( (pos, err, None, None) )
 			else:
 
 
-				pge_instance.alge_out_queue.put( (pos, None, meth, alged) )
+				PGE.alge_out_queue.put( (pos, None, meth, alged) )
 		except Exception as e:
 			print("alge breaking!", e, "\n  ", pos, modl.expr)
 			break

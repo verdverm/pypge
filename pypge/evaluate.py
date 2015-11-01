@@ -104,30 +104,30 @@ def Score(y_true, y_pred, err_metric):
 
 
 
-def peek_model(modl, vars, X_train, Y_train, err_method):
+def peek_model(modl, vars, X_peek, Y_peek, err_method):
 	# fit the modl
-	evaluate.Fit(modl, vars, X_peek, Y_peek)
+	Fit(modl, vars, X_peek, Y_peek)
 	if modl.error or not modl.fit_result.success:
 		modl.error = "errored while fitting"
 		modl.errored = True
 		return False
 	
 	# score the modl
-	y_pred = evaluate.Eval(modl, vars, X_peek)
+	y_pred = Eval(modl, vars, X_peek)
 
-	modl.score, err = evaluate.Score(Y_peek, y_pred, err_method)
+	modl.score, err = Score(Y_peek, y_pred, err_method)
 	if err is not None:
 		modl.error = "errored while scoring"
 		modl.errored = True
 		return False
 	
-	modl.r2, err = evaluate.Score(Y_peek, y_pred, "r2")
+	modl.r2, err = Score(Y_peek, y_pred, "r2")
 	if err is not None:
 		modl.error = "errored while r2'n"
 		modl.errored = True
 		return False
 	
-	modl.evar, err = evaluate.Score(Y_peek, y_pred, "evar")
+	modl.evar, err = Score(Y_peek, y_pred, "evar")
 	if err is not None:
 		modl.error = "errored while evar'n"
 		modl.errored = True
@@ -154,28 +154,28 @@ def peek_model(modl, vars, X_train, Y_train, err_method):
 def eval_model(modl, vars, X_train, Y_train, err_method):
 
 	# fit the modl
-	evaluate.Fit(modl, vars, X_train, Y_train)
+	Fit(modl, vars, X_train, Y_train)
 	if modl.error or not modl.fit_result.success:
 		modl.error = "errored while fitting"
 		modl.errored = True
 		return False
 	
 	# score the modl
-	y_pred = evaluate.Eval(modl, vars, X_train)
+	y_pred = Eval(modl, vars, X_train)
 
-	modl.score, err = evaluate.Score(Y_train, y_pred, err_method)
+	modl.score, err = Score(Y_train, y_pred, err_method)
 	if err is not None:
 		modl.error = "errored while scoring"
 		modl.errored = True
 		return False
 	
-	modl.r2, err = evaluate.Score(Y_train, y_pred, "r2")
+	modl.r2, err = Score(Y_train, y_pred, "r2")
 	if err is not None:
 		modl.error = "errored while r2'n"
 		modl.errored = True
 		return False
 	
-	modl.evar, err = evaluate.Score(Y_train, y_pred, "evar")
+	modl.evar, err = Score(Y_train, y_pred, "evar")
 	if err is not None:
 		modl.error = "errored while evar'n"
 		modl.errored = True
