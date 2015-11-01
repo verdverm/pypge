@@ -1,6 +1,6 @@
-name: "plain"
+name: "explicit_plain"
 
-workers: 1
+workers: 2
 queue_size: 4096
 
 max_iter: 10

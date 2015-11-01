@@ -135,13 +135,17 @@ class PGE:
 		# log files
 		os.makedirs(self.log_dir, exist_ok=True)
 
+		log_files = ["main", "graph", "nodes", "evals", "errs", "final"]
+
 		self.logs = {}
 		self.logs["stdout"] = sys.stdout
-		self.logs["main"]   = open(self.log_dir + "pge_main.log", "w")
-		self.logs["graph"]  = open(self.log_dir + "pge_graph.log", "w")
-		self.logs["nodes"]  = open(self.log_dir + "pge_nodes.log", "w")
-		self.logs["errs"]   = open(self.log_dir + "pge_errs.log", "w")
-		self.logs["final"]   = open(self.log_dir + "pge_final.log", "w")
+		for lf in log_files:
+			self.logs[lf] = open(self.log_dir + "pge_" + lf + ".log", "w")
+		# self.logs["main"]   = open(self.log_dir + "pge_main.log", "w")
+		# self.logs["graph"]  = open(self.log_dir + "pge_graph.log", "w")
+		# self.logs["nodes"]  = open(self.log_dir + "pge_nodes.log", "w")
+		# self.logs["errs"]   = open(self.log_dir + "pge_errs.log", "w")
+		# self.logs["final"]   = open(self.log_dir + "pge_final.log", "w")
 		print( ' '.join(err_columns), file=self.logs["errs"] )
 
 		# memoizer & grower
@@ -214,6 +218,9 @@ class PGE:
 
 		return True
 
+	def assign_iter_id(self, expr_list):
+		for e in expr_list:
+			e.iter_id = self.curr_iter
 
 
 	# sklearn estimator interface functions
@@ -295,6 +302,7 @@ class PGE:
 
 		# create first models
 		first_exprs = self.grower.first_exprs()
+		self.assign_iter_id(first_exprs)
 		pfunc("create first exprs", len(first_exprs), lognames=["stdout","main"])
 
 		# filter and memoize first_exprs models
@@ -308,6 +316,7 @@ class PGE:
 
 			# algebra the models which made it through
 			algebrad = self.algebra_models(to_alge)
+			self.assign_iter_id(algebrad)
 			pfunc("algebra => result models", len(to_alge), numto=len(algebrad), lognames=["stdout","main"])
 
 			# filter and memoize the algebrad models
@@ -389,6 +398,7 @@ class PGE:
 
 			# expand these models, popd are finalized
 			expanded = self.expand_models(popd)
+			self.assign_iter_id(expanded)
 			pfunc("popped => expanded", len(popd), numto=len(expanded), lognames=["stdout","main"])
 
 			# filter and memoize expanded models
@@ -402,6 +412,7 @@ class PGE:
 
 				# algebra the models which made it through
 				algebrad = self.algebra_models(to_alge)
+				self.assign_iter_id(algebrad)
 				pfunc("algebra => result models", len(to_alge), numto=len(algebrad), lognames=["stdout","main"])
 
 				# filter and memoize the algebrad models
@@ -722,7 +733,7 @@ class PGE:
 
 	def peek_push_models(self, models):
 		# print ("  peek_queue'n:", len(models))
-		ms = [m for m in models if m is not None and m.errored is False]
+		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
 		self.nsga2_peek.extend(ms)
 		# self.spea2_peek.extend(ms)
 		for m in ms:
@@ -731,7 +742,7 @@ class PGE:
 
 	def eval_push_models(self, models):
 		# print ("  eval_queue'n:", len(models))
-		ms = [m for m in models if m is not None and m.errored is False]
+		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
 		self.nsga2_list.extend(ms)
 		# self.spea2_list.extend(ms)
 		for m in models:
@@ -806,14 +817,31 @@ class PGE:
 			self.peek_models_multiprocess(models)
 		else:
 			# print ("  peek'n:", len(models))
-			for m in models:
-				passed = self.peek_model(m)
-				if not passed or m.error is not None:
-					print (m.error, m.exception, "\n   ", m.expr)
+			for modl in models:
+				passed = self.peek_model(modl)
+				if not passed or modl.error is not None:
+					print (modl.error, modl.exception, "\n   ", modl.expr)
 					continue
-				m.peek_nfev = m.fit_result.nfev
-				self.peek_nfev += m.peek_nfev
+				modl.peek_nfev = modl.fit_result.nfev
+				self.peek_nfev += modl.peek_nfev
 				self.peekd_models += 1
+
+				if modl.parent_id >= 0:
+					parent = self.memoizer.get_by_id(modl.parent_id)
+					modl.improve_score = parent.score - modl.score
+					modl.improve_r2 = modl.r2 - parent.r2
+					modl.improve_evar = modl.evar - parent.evar
+					modl.improve_aic = parent.aic - modl.aic
+					modl.improve_bic = parent.bic - modl.bic
+					modl.improve_redchi = parent.redchi - modl.redchi
+				else:
+					# should probaly normalized this across the initial population and permenately set
+					modl.improve_score  = -0.000001 * modl.score
+					modl.improve_r2     = -0.000001 * modl.r2
+					modl.improve_evar   = -0.000001 * modl.evar
+					modl.improve_aic    = -0.000001 * modl.aic
+					modl.improve_bic    = -0.000001 * modl.bic
+					modl.improve_redchi = -0.000001 * modl.redchi
 
 	def peek_models_multiprocess(self, models):
 		# print ("  multi-peek'n:", len(models))
@@ -844,9 +872,22 @@ class PGE:
 				modl.errored = True
 				# print ("GOT HERE ERROR", err, dat)
 			else:
-				modl.score = dat['score']
-				modl.r2 = dat['r2']
-				modl.evar = dat['evar']
+				modl.score  = dat['score']
+				modl.r2     = dat['r2']
+				modl.evar   = dat['evar']
+				modl.aic    = dat['aic']
+				modl.bic    = dat['bic']
+				modl.chisqr = dat['chisqr']
+				modl.redchi = dat['redchi']
+				
+				modl.peek_score  = modl.score
+				modl.peek_r2     = modl.r2
+				modl.peek_evar   = modl.evar
+				modl.peek_aic    = modl.aic
+				modl.peek_bic    = modl.bic
+				modl.peek_chisqr = modl.chisqr
+				modl.peek_redchi = modl.redchi
+
 				modl.peek_nfev = dat['nfev']
 				self.peek_nfev += modl.peek_nfev
 				self.peekd_models += 1
@@ -888,10 +929,14 @@ class PGE:
 			modl.errored = True
 			return False
 		
-		# copy values over for now, want to keep printing without changing code, but not forget these values either
-		modl.peek_score = modl.score
-		modl.peek_r2 = modl.r2
-		modl.peek_evar = modl.evar
+
+		modl.peek_score  = modl.score
+		modl.peek_r2     = modl.r2
+		modl.peek_evar   = modl.evar
+		modl.peek_aic    = modl.aic
+		modl.peek_bic    = modl.bic
+		modl.peek_chisqr = modl.chisqr
+		modl.peek_redchi = modl.redchi
 		
 		modl.peeked = True
 
@@ -902,29 +947,66 @@ class PGE:
 			self.eval_models_multiprocess(models, self.workers)
 		else:
 			# print ("  eval'n:", len(models))
-			for m in models:
-				passed = self.eval_model(m)
-				if not passed or m.error is not None:
-					print (m.error, m.exception)
-					continue
-				m.eval_nfev = m.fit_result.nfev
-				self.eval_nfev += m.eval_nfev
-				self.evald_models += 1
+			for modl in models:
+				passed = self.eval_model(modl)
+				if not passed or modl.error is not None:
+					info = "{:5d}  ERROR     ".format(modl.id)
+					print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+				else:
+					self.eval_nfev += modl.eval_nfev
+					self.evald_models += 1
+					modl.eval_nfev = modl.fit_result.nfev
+
+					info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+					print(info, modl.expr, modl.jac, file=self.logs["evals"])
+			
+					if modl.parent_id >= 0:
+						parent = self.memoizer.get_by_id(modl.parent_id)
+						modl.improve_score = parent.score - modl.score
+						modl.improve_r2 = modl.r2 - parent.r2
+						modl.improve_evar = modl.evar - parent.evar
+						modl.improve_aic = parent.aic - modl.aic
+						modl.improve_bic = parent.bic - modl.bic
+						modl.improve_redchi = parent.redchi - modl.redchi
+					else:
+						# should probaly normalized this across the initial population and permenately set
+						modl.improve_score  = -0.000001 * modl.score
+						modl.improve_r2     = -0.000001 * modl.r2
+						modl.improve_evar   = -0.000001 * modl.evar
+						modl.improve_aic    = -0.000001 * modl.aic
+						modl.improve_bic    = -0.000001 * modl.bic
+						modl.improve_redchi = -0.000001 * modl.redchi
 
 	def eval_models_multiprocess(self, models, processes):
 		# print ("  multi-eval'n:", len(models))
 
+		LenModels = len(models)
+		cnt1 = 0
 		for i,m in enumerate(models):
-			self.eval_in_queue.put( (i,m) )
-		
-		for i in range(len(models)):
+			pkg = (cnt1,m)
+			self.eval_in_queue.put( pkg )
+			cnt1 += 1
+
+		# print("  LENGTHS: ", LenModels, cnt1)
+
+		cnt2 = 0		
+		for i in range(cnt1):
 			ret = self.eval_out_queue.get()
 			pos = ret[0]
 			err = ret[1]
 			dat = ret[2]
-			modl = models[ret[0]]
+
+			cnt2 += 1
+
+			try:
+				modl = models[pos]
+			except Exception as e:
+				print ("POS ERROR: ", pos, len(models), e, ret)
+				continue
 
 			if err is not None:
+				# print("ERROR IS NOT NONE", err)
 				modl.error = err
 				modl.exception = dat
 				modl.errored = True
@@ -932,22 +1014,51 @@ class PGE:
 				modl.score = dat['score']
 				modl.r2 = dat['r2']
 				modl.evar = dat['evar']
+				modl.aic = dat['aic']
+				modl.bic = dat['bic']
+				modl.chisqr = dat['chisqr']
+				modl.redchi = dat['redchi']
+
 				modl.eval_nfev = dat['nfev']
 				self.eval_nfev += modl.eval_nfev
 				self.evald_models += 1
 				
+				info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+				print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
 				for v in dat['params']:
+					if len(v[0]) == 1 and v[0] == 'C':
+						print("GOT THE SINGULAR: ", v[0], dat['params'])
+						continue
+					# if v[0] in modl.params:
 					modl.params[v[0]].value = v[1]
+
+				if modl.parent_id >= 0:
+					parent = self.memoizer.models[modl.parent_id]
+					# print("  ", parent.id, parent.expr )
+					modl.improve_score = parent.score - modl.score
+					modl.improve_r2 = modl.r2 - parent.r2
+					modl.improve_evar = modl.evar - parent.evar
+					modl.improve_aic = parent.aic - modl.aic
+					modl.improve_bic = parent.bic - modl.bic
+					modl.improve_redchi = parent.redchi - modl.redchi
+				else:
+					# should probaly normalized this across the initial population and permenately set
+					modl.improve_score  = -0.000001 * modl.score
+					modl.improve_r2     = -0.000001 * modl.r2
+					modl.improve_evar   = -0.000001 * modl.evar
+					modl.improve_aic    = -0.000001 * modl.aic
+					modl.improve_bic    = -0.000001 * modl.bic
+					modl.improve_redchi = -0.000001 * modl.redchi
 
 				modl.evaluated = True
 
+		# print("  CNTS: ", cnt1, cnt2)
+
 	def eval_model(self, modl):
-		diffeq = False
-		if self.system_type == "diffeq":
-			diffeq = True
 
 		# fit the modl
-		evaluate.Fit(modl, self.vars, self.X_train, self.Y_train, diffeq=diffeq)
+		evaluate.Fit(modl, self.vars, self.X_train, self.Y_train)
 		if modl.error or not modl.fit_result.success:
 			modl.error = "errored while fitting"
 			modl.errored = True
@@ -979,24 +1090,6 @@ class PGE:
 		modl.bic = modl.fit_result.bic
 		modl.chisqr = modl.fit_result.chisqr
 		modl.redchi = modl.fit_result.redchi
-
-		if modl.parent_id >= 0:
-			parent = self.memoizer.models[modl.parent_id]
-			# print("  ", parent.id, parent.expr )
-			modl.improve_score = parent.score - modl.score
-			modl.improve_r2 = modl.r2 - parent.r2
-			modl.improve_evar = modl.evar - parent.evar
-			modl.improve_aic = parent.aic - modl.aic
-			modl.improve_bic = parent.bic - modl.bic
-			modl.improve_redchi = parent.redchi - modl.redchi
-		else:
-			# should probaly normalized this across the initial population and permenately set
-			modl.improve_score  = -0.000001 * modl.score
-			modl.improve_r2     = -0.000001 * modl.r2
-			modl.improve_evar   = -0.000001 * modl.evar
-			modl.improve_aic    = -0.000001 * modl.aic
-			modl.improve_bic    = -0.000001 * modl.bic
-			modl.improve_redchi = -0.000001 * modl.redchi
 
 		modl.evaluated = True
 

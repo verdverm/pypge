@@ -53,7 +53,7 @@ class Mapper:
 
 	def __init__(self, variables):
 		self.variables = variables
-		self.coeffs = sympy.symbols("C C_0:16")
+		self.coeffs = sympy.symbols("C C_0:128")
 		self.map = {
 			## the Leaf types
 

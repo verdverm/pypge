@@ -1,6 +1,6 @@
 import sympy
 C = sympy.Symbol('C')
-CS = [sympy.Symbol("C_"+str(i)) for i in range(64)]
+CS = [sympy.Symbol("C_"+str(i)) for i in range(128)]
 
 from lmfit import Parameters
 
@@ -37,15 +37,22 @@ class Model:
 
 		# expression variations
 		self.orig = expr
-		self.expr = expr
+		# self.expr = expr
 		self.pretty = None
 
 		# vars, coeff, params
 		self.xs = xs
 		self.cs = cs
 		self.params = None
-		if self.cs is None:
-			self.rewrite_coeff()
+
+
+		# initialization processes
+		self.expr = sympy.expand(self.orig)
+		self.rewrite_coeff()
+		self.jac = [ sympy.diff(self.expr, c) for c in self.cs ]
+		
+
+
 
 		# fitness metrics
 		self.sz = 0
@@ -56,16 +63,16 @@ class Model:
 		self.score = None
 		self.r2 = None
 		self.evar = None
-		self.chi2 = None
 		self.aic = None
 		self.bic = None
+		self.redchi = None
 
 		self.improve_score = None
 		self.improve_r2 = None
 		self.improve_evar = None
-		self.improve_chi2 = None
 		self.improve_aic = None
 		self.improve_bic = None
+		self.improve_redchi = None
 
 
 		self.fitness = None
@@ -90,8 +97,8 @@ class Model:
 	def __str__(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} |  {:s}"
-		return fs.format(self.id, self.parent_id, self.size(),
+		fs = "{:5d}  {:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} |  {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.pretty)
 
@@ -101,7 +108,7 @@ class Model:
 		return cols
 
 	def print_long_columns(self):
-		cols =  "      id    pid  sz           "
+		cols =  "      id    iid    pid  sz           "
 		cols += "error         r2     expld_vari          aic              bic            redchi   |        "
 		cols += "I_error      I_r2    I_expld_vari        I_aic            I_bic          I_redchi        theModel"
 		return cols
@@ -109,8 +116,8 @@ class Model:
 	def print_long(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} | {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f}    {:s}"
-		return fs.format(self.id, self.parent_id, self.size(),
+		fs = "{:5d}  {:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} | {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f}    {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.improve_score,self.improve_r2,self.improve_evar,self.improve_aic,self.improve_bic,self.improve_redchi,
 			self.pretty)
@@ -118,13 +125,13 @@ class Model:
 	def print_csv(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d},  {:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:15.6f},  {:15.6f},  {:15.6f},  {:s}"
-		return fs.format(self.id, self.parent_id, self.size(),
+		fs = "{:5d},  {:5d},  {:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:15.6f},  {:15.6f},  {:15.6f},  {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.pretty)
 
 	def print_csv_columns(self):
-		cols =  "   id,    pid,  sz,          "
+		cols =  "   id,    iid,    pid,  sz,          "
 		cols += "error,        r2,       evar,          aic,             bic,          redchi,         theModel"
 		return cols
 

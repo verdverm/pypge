@@ -207,6 +207,9 @@ class Grower:
 
 		add_terms = [ C*x+C for x in self.xs ]
 
+		self.var_sub_dep_lim_terms = self.wout_c_xs2_muls
+		self.var_sub_dep_terms = self.var_sub_dep_lim_terms + self.wout_c_func_exprs
+
 		if self.subs_level == "low":
 			self.var_sub_lim_terms = self.wout_c_xs2_muls
 			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
@@ -291,7 +294,7 @@ class Grower:
 		return models
 
 
-	def _var_sub(self, expr, limit_sub=False):
+	def _var_sub(self, expr, limit_sub=False, depth=1):
 		new_exprs = []
 		# only worry about non-atoms, cause we have to replace args
 		if not expr.is_Atom:
@@ -299,14 +302,14 @@ class Grower:
 			# each member of the list is the original expr's args with one substitution made
 			args_sets = []
 			for i,e in enumerate(expr.args):
-				# if the current arg is also a non-atom, recurse
+				# if the current arg is also a non-atom, then recursion!
 				if not e.is_Atom:
 					## check to see if we are in some function besides ADD or MUL
 					## if so, limit what we substitute
 					lim_sub = limit_sub or not (e.is_Add or e.is_Mul)
 					# for each expr returned, we need to clone the current args
 					# and make the substitution, sorta like flattening?
-					ee = self._var_sub(e, lim_sub)
+					ee = self._var_sub(e, lim_sub, depth=depth+1)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
 						for vs in ee:
@@ -319,10 +322,19 @@ class Grower:
 
 				elif e in self.xs:
 					## Lets make a variable substitution !!
-					# loop over self.var_sub_terms
-					sub_terms = self.var_sub_terms
+					## First, whats the context? what are we going to substitute?
+					sub_terms = None
+					if depth > 3:
+						sub_terms = self.var_sub_dep_terms
+					else:
+						sub_terms = self.var_sub_terms
 					if limit_sub:
-						sub_terms = self.var_sub_lim_terms
+						if depth > 3:
+							sub_terms = self.var_sub_lim_terms
+						else:
+							sub_terms = self.var_sub_lim_terms
+
+					# loop over sub_terms, subing for and create new arg sets
 					for vs in sub_terms:
 						# clone current args
 						cloned_args = list(expr.args)
@@ -332,6 +344,7 @@ class Grower:
 						args_sets.append(cloned_args)
 				else:
 					# we don't have to do anything, probably?
+					# coefficients?
 					pass
 
 			# finally, create all of the clones at the current level of recursion

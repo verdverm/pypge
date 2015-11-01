@@ -69,7 +69,7 @@ if args.target is not None:
 	else:
 		sys.exit("target not found") 
 
-cols = [col for col in df.columns if not (col == target or col in config["excluded_cols"])]
+cols = [col for col in df.columns if not (col == target or (len(col)>2 and col[:2] == "D_") or col in config["excluded_cols"])]
 
 print("ins:", cols)
 print("target:", target)

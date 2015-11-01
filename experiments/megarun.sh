@@ -2,7 +2,7 @@
 
 explicit_probs=(
 	"koza_01;out"
-	# "koza_02;out"
+	"koza_02;out"
 	# "koza_03;out"
 	# "lipson_01;out"
 	# "lipson_02;out"
@@ -11,15 +11,15 @@ explicit_probs=(
 	# "nguyen_01;out"
 	# "nguyen_02;out"
 	# "nguyen_03;out"
-	# "nguyen_04;out"
-	# "nguyen_05;out"
+	"nguyen_04;out"
+	"nguyen_05;out"
 	# "nguyen_06;out"
 	# "nguyen_07;out"
 	# "nguyen_08;out"
 	# "nguyen_09;out"
-	# "nguyen_10;out"
+	"nguyen_10;out"
 	# "nguyen_11;out"
-	# "nguyen_12;out"
+	"nguyen_12;out"
 
 	# "korns_01;out"
 	# "korns_02;out"
@@ -39,30 +39,30 @@ explicit_probs=(
 )
 
 diffeq_probs=(
-	# "bacresp;dx"
-	# "bacresp;dy"
-	# "barmags;dX"
-	# "barmags;dY"
-	# "glider;dv"
-	# "glider;dA"
-	# "ecoli;dG"
-	# "ecoli;dA"
-	# "ecoli;dL"
-	# "lorenz;dx"
-	# "lorenz;dy"
-	# "lorenz;dz"
-	# "shearflow;dA"
-	# "shearflow;dB"
-	# "vanderpol;dx"
-	# "vanderpol;dy"
-	# "lotkavolterra;dx"
-	# "lotkavolterra;dy"
-	# "predpreyfrac;dx"
-	# "predpreyfrac;dy"
-	# "simplependulum;dA"
-	# "simplependulum;dV"
-	# "chaoticpendulum;dA"
-	# "chaoticpendulum;dV"
+	"bacresp;D_x"
+	"bacresp;D_y"
+	# "barmags;D_X"
+	# "barmags;D_Y"
+	"glider;D_v"
+	"glider;D_A"
+	"ecoli;D_G"
+	"ecoli;D_A"
+	"ecoli;D_L"
+	# "lorenz;D_x"
+	# "lorenz;D_y"
+	# "lorenz;D_z"
+	# "shearflow;D_A"
+	# "shearflow;D_B"
+	# "vanderpol;D_x"
+	# "vanderpol;D_y"
+	# "lotkavolterra;D_x"
+	# "lotkavolterra;D_y"
+	"predpreyfrac;D_x"
+	"predpreyfrac;D_y"
+	"simplependulum;D_A"
+	"simplependulum;D_V"
+	"chaoticpendulum;D_A"
+	"chaoticpendulum;D_V"
 )
 
 # ----------------
@@ -73,7 +73,7 @@ experiments=(
 
 noise=(
 	"clean"
-	# "noisy"
+	"noisy"
 )
 
 datadir="../data/"
@@ -92,7 +92,7 @@ run_experiment() {
 	prob=${fields[0]}
 	target=${fields[1]}
 
-	# echo "  ${systype} ${experiment} -- ${cfg} :: ${noise} - ${prob} - ${target}"
+	echo "  ${experiment} -- ${cfg} :: ${noise} - ${prob} - ${target}"
 
 	cfgfile="${experiment}/${cfg}"
 	inputfile="${datadir}/benchmarks/${systype}/${prob}_${noise}.csv"
@@ -102,8 +102,8 @@ run_experiment() {
 
 	flags="--target ${target}"
 
-	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
-	# python main.py ${flags} ${configfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
+	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
+	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
 
 
 }
@@ -114,7 +114,7 @@ experiment_looper () {
 	experiment=$2
 	declare -a problems=("${!3}")
 
-	configs=`ls ${experiment} | grep yml`
+	configs=`ls ${experiment} | grep "${systype}" | grep yml`
 	for config in ${configs[@]}; do
 		echo "--------------------------------"
 		echo "    $experiment -- $config"

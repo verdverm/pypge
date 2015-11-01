@@ -1,5 +1,7 @@
-from sympy import preorder_traversal, numbers
+from sympy import preorder_traversal, numbers, Symbol
+import sympy
 
+C = Symbol("C")
 ## Filters on expressions
 #
 #  Each filter should take both a model and expression
@@ -21,6 +23,11 @@ def filter_model(modl, expr, filters):
 				return True
 	return False
 
+
+def filter_just_C(modl,expr):
+	if modl.orig is C or modl.orig == C:
+		return True
+	return False
 
 def filter_too_big(modl, expr, big=64):
 	if modl.size() > big:
@@ -46,4 +53,4 @@ def filter_has_big_pow(modl, expr, big=6):
 	return False
 
 
-default_filters = [filter_too_big,filter_has_int_coeff,filter_has_big_pow]
+default_filters = [filter_too_big,filter_has_int_coeff,filter_has_big_pow,filter_just_C]

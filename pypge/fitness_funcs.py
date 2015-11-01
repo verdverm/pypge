@@ -43,6 +43,7 @@ def fitness_calc_norm(extractor):
 
 		normed = []
 		for col in npvals:
+			# print("COL: ", col)
 			norm = col / np.linalg.norm(col)
 			normed.append(norm)
 

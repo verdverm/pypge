@@ -25,6 +25,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 		try:
 			val = pge_instance.peek_in_queue.get()
 			if val is None:
+				print("Val None Breaking Peek Processor")
 				break;
 			pos = val[0]
 			modl = val[1]
@@ -33,18 +34,24 @@ def unwrap_self_peek_model_queue(pge_instance):
 			if not passed:
 				pge_instance.peek_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
-				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+				vals = [ (k,v) for (k,v) in modl.params.valuesdict().items() ]
 				ret_data = {
 					'score': modl.score,
 					'r2': modl.r2,
 					'evar': modl.evar,
+					'aic': modl.aic,
+					'bic': modl.bic,
+					'chisqr': modl.chisqr,
+					'redchi': modl.redchi,
 					'params': vals,
 					'nfev': modl.fit_result.nfev
 				}
 				pge_instance.peek_out_queue.put( (pos, None, ret_data) )
+
 		except Exception as e:
-			print("breaking!", e, "\n  ", pos, modl.expr)
+			print("peek breaking!", e, "\n  ", pos, modl.expr, val)
 			break
+
 
 ## FULL EVALUATION MULTIPROCESSING
 def unwrap_self_eval_model_queue(pge_instance):
@@ -52,25 +59,35 @@ def unwrap_self_eval_model_queue(pge_instance):
 		try:
 			val = pge_instance.eval_in_queue.get()
 			if val is None:
+				print("Val None Breaking Eval Processor")
 				break;
 			pos = val[0]
 			modl = val[1]
 
+			passed = False
 			passed = search.PGE.eval_model(pge_instance, modl)
 			if not passed:
 				pge_instance.eval_out_queue.put( (pos, modl.error, modl.exception) )
+
 			else:
-				vals = [ (str(c),modl.params[str(c)].value) for c in modl.cs ]
+				vals = [ (k,v) for (k,v) in modl.params.valuesdict().items() ]
+				# vals = modl.params.valuesdict()
 				ret_data = {
 					'score': modl.score,
 					'r2': modl.r2,
 					'evar': modl.evar,
+					'aic': modl.aic,
+					'bic': modl.bic,
+					'chisqr': modl.chisqr,
+					'redchi': modl.redchi,
 					'params': vals,
 					'nfev': modl.fit_result.nfev
 				}
+			
 				pge_instance.eval_out_queue.put( (pos, None, ret_data) )
+
 		except Exception as e:
-			print("breaking!", e, "\n  ", pos, modl.expr)
+			print("eval breaking!", e, "\n  ", pos, modl.expr, passed, modl.params.valuesdict())
 			break
 
 
@@ -80,6 +97,7 @@ def unwrap_self_alge_model_queue(pge_instance):
 		try:
 			val = pge_instance.alge_in_queue.get()
 			if val is None:
+				print("Val None Breaking Algebra Processor")
 				break;
 			pos = val[0]
 			modl = val[1]
@@ -94,5 +112,5 @@ def unwrap_self_alge_model_queue(pge_instance):
 
 				pge_instance.alge_out_queue.put( (pos, None, meth, alged) )
 		except Exception as e:
-			print("breaking!", e, "\n  ", pos, modl.expr)
+			print("alge breaking!", e, "\n  ", pos, modl.expr)
 			break
