@@ -1,5 +1,6 @@
 from __future__ import print_function
-from pypge import search
+
+from pypge import evaluate
 from pypge import algebra
 
 ## We ~can~ parallelize the following stages
@@ -30,7 +31,7 @@ def unwrap_self_peek_model_queue(pge_instance):
 			pos = val[0]
 			modl = val[1]
 
-			passed = search.PGE.peek_model(pge_instance, modl)
+			passed = evaluate.PGE.peek_model(pge_instance, modl)
 			if not passed:
 				pge_instance.peek_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
@@ -65,7 +66,7 @@ def unwrap_self_eval_model_queue(pge_instance):
 			modl = val[1]
 
 			passed = False
-			passed = search.PGE.eval_model(pge_instance, modl)
+			passed = evaluate.PGE.eval_model(pge_instance, modl)
 			if not passed:
 				pge_instance.eval_out_queue.put( (pos, modl.error, modl.exception) )
 

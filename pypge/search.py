@@ -818,7 +818,7 @@ class PGE:
 		else:
 			# print ("  peek'n:", len(models))
 			for modl in models:
-				passed = self.peek_model(modl)
+				passed = evaluate.peex_model(modl, self.vars, self.X_peek, self.Y_peek, self.err_method)
 				if not passed or modl.error is not None:
 					print (modl.error, modl.exception, "\n   ", modl.expr)
 					continue
@@ -900,47 +900,6 @@ class PGE:
 				modl.peeked = True
 
 
-	def peek_model(self, modl):
-		# fit the modl
-		evaluate.Fit(modl, self.vars, self.X_peek, self.Y_peek)
-		if modl.error or not modl.fit_result.success:
-			modl.error = "errored while fitting"
-			modl.errored = True
-			return False
-		
-		# score the modl
-		y_pred = evaluate.Eval(modl, self.vars, self.X_peek)
-
-		modl.score, err = evaluate.Score(self.Y_peek, y_pred, self.err_method)
-		if err is not None:
-			modl.error = "errored while scoring"
-			modl.errored = True
-			return False
-		
-		modl.r2, err = evaluate.Score(self.Y_peek, y_pred, "r2")
-		if err is not None:
-			modl.error = "errored while r2'n"
-			modl.errored = True
-			return False
-		
-		modl.evar, err = evaluate.Score(self.Y_peek, y_pred, "evar")
-		if err is not None:
-			modl.error = "errored while evar'n"
-			modl.errored = True
-			return False
-		
-
-		modl.peek_score  = modl.score
-		modl.peek_r2     = modl.r2
-		modl.peek_evar   = modl.evar
-		modl.peek_aic    = modl.aic
-		modl.peek_bic    = modl.bic
-		modl.peek_chisqr = modl.chisqr
-		modl.peek_redchi = modl.redchi
-		
-		modl.peeked = True
-
-		return True # passed
 
 	def eval_models(self, models):
 		if self.workers > 1:
@@ -948,7 +907,7 @@ class PGE:
 		else:
 			# print ("  eval'n:", len(models))
 			for modl in models:
-				passed = self.eval_model(modl)
+				passed = evaluate.eval_model(modl, self.vars, self.X_train, self.Y_train, self.err_method)
 				if not passed or modl.error is not None:
 					info = "{:5d}  ERROR     ".format(modl.id)
 					print(info, modl.expr, modl.jac, file=self.logs["evals"])
@@ -1054,58 +1013,6 @@ class PGE:
 				modl.evaluated = True
 
 		# print("  CNTS: ", cnt1, cnt2)
-
-	def eval_model(self, modl):
-
-		# fit the modl
-		evaluate.Fit(modl, self.vars, self.X_train, self.Y_train)
-		if modl.error or not modl.fit_result.success:
-			modl.error = "errored while fitting"
-			modl.errored = True
-			return False
-		
-		# score the modl
-		y_pred = evaluate.Eval(modl, self.vars, self.X_train)
-
-		modl.score, err = evaluate.Score(self.Y_train, y_pred, self.err_method)
-		if err is not None:
-			modl.error = "errored while scoring"
-			modl.errored = True
-			return False
-		
-		modl.r2, err = evaluate.Score(self.Y_train, y_pred, "r2")
-		if err is not None:
-			modl.error = "errored while r2'n"
-			modl.errored = True
-			return False
-		
-		modl.evar, err = evaluate.Score(self.Y_train, y_pred, "evar")
-		if err is not None:
-			modl.error = "errored while evar'n"
-			modl.errored = True
-			return False
-
-
-		modl.aic = modl.fit_result.aic
-		modl.bic = modl.fit_result.bic
-		modl.chisqr = modl.fit_result.chisqr
-		modl.redchi = modl.fit_result.redchi
-
-		modl.evaluated = True
-
-		# print("  ", modl.id, modl.parent_id,  modl.expr)
-		# print("    ", modl.score, modl.r2, modl.evar, modl.aic, modl.bic, modl.redchi )
-		# print("    ", modl.improve_score, modl.improve_r2, modl.improve_evar, modl.improve_aic, modl.improve_bic, modl.improve_redchi )
-		# if modl.parent_id >= 0:
-		# 	parent = self.memoizer.models[modl.parent_id]
-		# 	print("  ", parent.id, parent.parent_id,  parent.expr)
-		# 	print("    ", parent.score, parent.r2, parent.evar, parent.aic, parent.bic, parent.redchi )
-		# 	print("    ", parent.improve_score, parent.improve_r2, parent.improve_evar, parent.improve_aic, parent.improve_bic, parent.improve_redchi )
-		# print()
-
-				
-
-		return True # passed
 
 
 
