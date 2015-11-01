@@ -85,6 +85,7 @@ class PGE:
 		# --------------------
 		# --------------------
 
+
 		# do some conversions for string params to python objects
 		self.usable_funcs = expand.map_names_to_funcs(self.usable_funcs)
 		# self.fitness_calc = fitness_funcs.get_fitness_calc(self.fitness_func)
@@ -142,7 +143,6 @@ class PGE:
 		self.logs["errs"]   = open(self.log_dir + "pge_errs.log", "w")
 		self.logs["final"]   = open(self.log_dir + "pge_final.log", "w")
 		print( ' '.join(err_columns), file=self.logs["errs"] )
-
 
 		# memoizer & grower
 		self.memoizer = memoize.Memoizer(self.vars)
@@ -202,8 +202,7 @@ class PGE:
 			This function checks the correctness of the PGE configuration.
 			It is not quite complete at the time of this writing
 		"""
-		if self.system_type == None \
-		or self.search_vars == None \
+		if self.search_vars == None \
 		or self.usable_vars == None:
 			return False
 

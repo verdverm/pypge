@@ -69,31 +69,12 @@ noise=(
 	# "noisy"
 )
 
-func_levels=(
-	"linear"
-	# "nonlin"
-)
-
-init_levels=(
-	"low"
-	# "med"
-	# "high"
-)
-
-grow_levels=(
-	"low"
-	# "med"
-	# "high"
-)
 
 systype="explicit"
 # systype="diffeq"
 
 for probFields in ${probs[@]}; do
 for amount in ${noise[@]}; do
-for init in ${init_levels[@]}; do
-for grow in ${grow_levels[@]}; do
-for func in ${func_levels[@]}; do
 
 	prob=${probFields}
 	target="out"
@@ -115,9 +96,6 @@ for func in ${func_levels[@]}; do
 	python main.py ${flags} ${configfile} ${inputfile} ${outputdir}
 	# python main.py ${flags} ${configfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
 
-done
-done
-done
 done
 done
 
