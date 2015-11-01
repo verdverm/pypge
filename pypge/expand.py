@@ -330,7 +330,7 @@ class Grower:
 						sub_terms = self.var_sub_terms
 					if limit_sub:
 						if depth > 3:
-							sub_terms = self.var_sub_lim_terms
+							sub_terms = self.var_sub_dep_lim_terms
 						else:
 							sub_terms = self.var_sub_lim_terms
 
