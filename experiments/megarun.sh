@@ -73,7 +73,7 @@ experiments=(
 
 noise=(
 	"clean"
-	"noisy"
+	# "noisy"
 )
 
 datadir="../data/"

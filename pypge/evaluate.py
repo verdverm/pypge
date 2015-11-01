@@ -45,12 +45,12 @@ def Fit(modl, xs, X_train, Y_train):
 
 	result = None
 	try:
-		result = minimize(fcn2min, modl.params, args=(X_train,Y_train), Dfun=dfunc, col_deriv=1, factor=50, maxfev=200)
+		result = minimize(fcn2min, modl.params, args=(X_train,Y_train), Dfun=dfunc, col_deriv=1, factor=50, maxfev=100)
 
 	except Exception as e:
 		modl.exception = str(e)
 		modl.error = "error"
-		print("ERROR HERE: ", e, type(e), modl.id, modl.expr, modl.jac)
+		# print("ERROR HERE: ", e, type(e), modl.id, modl.expr, modl.jac)
 
 	modl.fit_result = result
 

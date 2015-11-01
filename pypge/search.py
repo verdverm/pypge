@@ -901,12 +901,21 @@ class PGE:
 
 
 
-	def eval_models(self, models):
+	def eval_models(self, models, progress=True):
 		if self.workers > 1:
-			self.eval_models_multiprocess(models, self.workers)
+			self.eval_models_multiprocess(models, self.workers, progress)
 		else:
 			# print ("  eval'n:", len(models))
-			for modl in models:
+			L = len(models)
+			ppp = L / 20
+			PPP = ppp
+			if progress:
+				print("     ", L, ppp, "  ", end="", flush=True)
+			
+			for i,modl in enumerate(models):
+				if progress and i >= PPP:
+					print('.',end="",flush=True)
+					PPP += ppp
 				passed = evaluate.eval_model(modl, self.vars, self.X_train, self.Y_train, self.err_method)
 				if not passed or modl.error is not None:
 					info = "{:5d}  ERROR     ".format(modl.id)
@@ -937,7 +946,10 @@ class PGE:
 						modl.improve_bic    = -0.000001 * modl.bic
 						modl.improve_redchi = -0.000001 * modl.redchi
 
-	def eval_models_multiprocess(self, models, processes):
+		if progress:
+			print("")
+
+	def eval_models_multiprocess(self, models, processes, progress=False):
 		# print ("  multi-eval'n:", len(models))
 
 		LenModels = len(models)
@@ -949,8 +961,18 @@ class PGE:
 
 		# print("  LENGTHS: ", LenModels, cnt1)
 
+		L = len(models)
+		ppp = L / 20
+		PPP = ppp
+		if progress:
+			print("     ", L, ppp, "  ", end="", flush=True)
+
 		cnt2 = 0		
 		for i in range(cnt1):
+			if progress and i >= PPP:
+				print('.',end="",flush=True)
+				PPP += ppp
+
 			ret = self.eval_out_queue.get()
 			pos = ret[0]
 			err = ret[1]
