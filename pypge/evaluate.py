@@ -8,7 +8,7 @@ from lmfit import minimize, Parameters
 from sklearn import metrics
 
 
-def Fit(modl, xs, X_train, Y_train):
+def Fit(modl, xs, X_train, Y_train, MAXFEV=100):
 	expr = modl.expr
 	ONES = np.ones(len(Y_train))
 
@@ -45,7 +45,7 @@ def Fit(modl, xs, X_train, Y_train):
 
 	result = None
 	try:
-		result = minimize(fcn2min, modl.params, args=(X_train,Y_train), Dfun=dfunc, col_deriv=1, factor=50, maxfev=100)
+		result = minimize(fcn2min, modl.params, args=(X_train,Y_train), Dfun=dfunc, col_deriv=1, maxfev=MAXFEV)
 
 	except Exception as e:
 		modl.exception = str(e)
@@ -151,10 +151,10 @@ def peek_model(modl, vars, X_peek, Y_peek, err_method):
 	return True # passed
 
 
-def eval_model(modl, vars, X_train, Y_train, err_method):
+def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
 
 	# fit the modl
-	Fit(modl, vars, X_train, Y_train)
+	Fit(modl, vars, X_train, Y_train, MAXFEV=MAXFEV)
 	if modl.error or not modl.fit_result.success:
 		modl.error = "errored while fitting"
 		modl.errored = True

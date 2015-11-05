@@ -65,7 +65,7 @@ class Mapper:
 			# Variable 'X_#': 5
 			# Derivative 'dX_#': 6
 
-			sympy.numbers.NegativeOne: 7,
+			sympy.numbers.NegativeOne: -1,
 
 
 			## the Node types

@@ -56,6 +56,9 @@ def unwrap_self_peek_model_queue(PGE):
 
 ## FULL EVALUATION MULTIPROCESSING
 def unwrap_self_eval_model_queue(PGE):
+	MAXFEV = 100
+	if PGE.remote_eval == True:
+		MAXFEV = 2
 	while True:
 		try:
 			val = PGE.eval_in_queue.get()
@@ -66,7 +69,7 @@ def unwrap_self_eval_model_queue(PGE):
 			modl = val[1]
 
 			passed = False
-			passed = evaluate.eval_model(modl, PGE.vars, PGE.X_train, PGE.Y_train, PGE.err_method)
+			passed = evaluate.eval_model(modl, PGE.vars, PGE.X_train, PGE.Y_train, PGE.err_method, MAXFEV=MAXFEV)
 			if not passed:
 				PGE.eval_out_queue.put( (pos, modl.error, modl.exception) )
 

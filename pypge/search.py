@@ -22,6 +22,8 @@ import os, sys, time
 
 numpy.random.seed(23)
 
+from websocket import create_connection
+import json
 
 
 class PGE:
@@ -114,22 +116,22 @@ class PGE:
 		self.eval_nfev = 0
 
 		err_columns = [
-		    "iteration",
-		    "peekd_models",
-		    "evald_models",
-		    "peek_fit_loops",
-		    "peek_point_evals",
-		    "eval_fit_loops",
-		    "eval_point_evals",
-		    "total_point_evals", 
-		    "best_size",
-		    "best_err",
-		    "best_r2",
-		    "best_vari",
-		    "ave_size",
-		    "ave_err",
-		    "ave_r2",
-		    "ave_evar"
+			"iteration",
+			"peekd_models",
+			"evald_models",
+			"peek_fit_loops",
+			"peek_point_evals",
+			"eval_fit_loops",
+			"eval_point_evals",
+			"total_point_evals", 
+			"best_size",
+			"best_err",
+			"best_r2",
+			"best_vari",
+			"ave_size",
+			"ave_err",
+			"ave_r2",
+			"ave_evar"
 		]
 
 		# log files
@@ -200,6 +202,22 @@ class PGE:
 			self.alge_procs = [mp.Process(target=parallel.unwrap_self_alge_model_queue, args=(self,) ) for i in range(self.workers)]
 
 
+		self.remote_eval = True
+		
+		if self.remote_eval == True:
+
+			# self.ws = create_connection("ws://localhost:8080/echo")
+			self.ws = create_connection("ws://192.168.1.5:8080/echo")
+
+
+			# print("Sending 'Hello, World'...")
+			# ws.send("Hello, World")
+			# print("Sent")
+			# print("Reeiving...")
+			# result =  ws.recv()
+			# print("Received: ", result)
+			# ws.close()
+	
 
 	def check_config(self):
 		"""
@@ -238,7 +256,6 @@ class PGE:
 		runtime = '     {:14.4f} seconds'.format(end - start)
 		print("TOTAL RUN TIME:", runtime)
 
-
 		### Sklearn doesn't want us to store this data
 		### But we want to for checkpointing and continuation
 		### This may require a finalization function
@@ -259,8 +276,36 @@ class PGE:
 		self.Y_peek = self.Y_train[pos]
 
 		print ("train.shape:", self.X_train.shape, self.Y_train.shape)
+		print ("train.T.shape:", self.X_train.T.shape)
 		print ("peekn.shape:", self.X_peek.shape, self.Y_peek.shape)
 		print ("\n\n")
+
+		if self.remote_eval == True:
+			data = {
+				'Kind': "InputData",
+				'Payload': X_train.T.tolist()
+			}
+
+			msg = json.dumps(data)
+
+			print("sending InputData: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("InputData ret: ", ok)
+
+			data = {
+				'Kind': "OutputData",
+				'Payload': Y_train.tolist()
+			}
+
+			msg = json.dumps(data)
+
+			print("sending OutputData: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("OutputData ret: ", ok)
+
+
 
 	def preloop(self):
 		# preloop setup (generates,evals,queues first models)
@@ -596,6 +641,10 @@ class PGE:
 			for proc in self.alge_procs:
 				proc.join()
 
+		if self.remote_eval == True:
+			self.ws.close()
+
+
 		print ("\n\ndone\n\n")
 
 		if self.log_details:
@@ -902,8 +951,18 @@ class PGE:
 
 
 	def eval_models(self, models, progress=True):
+
+		if self.remote_eval == True:
+			self.eval_models_remote(models,progress)
+		else:
+			self.eval_models_local(models,progress)
+
+
+	def eval_models_local(self, models, progress=False):
+
 		if self.workers > 1:
 			self.eval_models_multiprocess(models, self.workers, progress)
+
 		else:
 			# print ("  eval'n:", len(models))
 			L = len(models)
@@ -949,17 +1008,12 @@ class PGE:
 		if progress:
 			print("")
 
+
 	def eval_models_multiprocess(self, models, processes, progress=False):
-		# print ("  multi-eval'n:", len(models))
 
-		LenModels = len(models)
-		cnt1 = 0
 		for i,m in enumerate(models):
-			pkg = (cnt1,m)
+			pkg = (i,m)
 			self.eval_in_queue.put( pkg )
-			cnt1 += 1
-
-		# print("  LENGTHS: ", LenModels, cnt1)
 
 		L = len(models)
 		ppp = L / 20
@@ -967,8 +1021,7 @@ class PGE:
 		if progress:
 			print("     ", L, ppp, "  ", end="", flush=True)
 
-		cnt2 = 0		
-		for i in range(cnt1):
+		for i in range(L):
 			if progress and i >= PPP:
 				print('.',end="",flush=True)
 				PPP += ppp
@@ -977,8 +1030,6 @@ class PGE:
 			pos = ret[0]
 			err = ret[1]
 			dat = ret[2]
-
-			cnt2 += 1
 
 			try:
 				modl = models[pos]
@@ -1034,9 +1085,217 @@ class PGE:
 
 				modl.evaluated = True
 
-		# print("  CNTS: ", cnt1, cnt2)
 
 
 
+	def eval_models_remote(self, models, progress=False):
 
 
+		# Send the models for remote fitting
+		for i,m in enumerate(models):
+			pkg = (i,m)
+
+			serial, ffs = self.memoizer.encode(m.expr)
+
+			jac_serials = []
+			jac_strs = []
+			for jac in m.jac:
+				jsrl, ffs = self.memoizer.encode(jac)
+				jac_serials.append(jsrl)
+				jac_strs.append(str(jac))
+
+			payload = {
+				'pos': i,
+				'id': m.id,
+				'guess': m.guess,
+				'eserial': serial,
+				'eqnstr': str(m.expr),
+				'jserials': jac_serials,
+				'jacstrs': jac_strs
+			}
+
+			data = {
+				'Kind': "Equation",
+				'Payload': payload
+			}
+
+			msg = json.dumps(data)
+
+			self.ws.send(msg)
+
+
+
+		# receive the models and send for local evaluation
+		L = len(models)
+		ppp = L / 10
+		PPP = ppp
+		if progress:
+			print("     ", L, ppp, "  ", end="", flush=True)
+
+		for i in range(L):
+			if progress and i >= PPP:
+				print('.',end="",flush=True)
+				PPP += ppp
+
+
+			ret = self.ws.recv()
+			# print("WS RET:", ret)
+
+			dat = json.loads(ret)["Payload"]
+
+			pos = dat['Pos']
+			# err = dat[1]
+			# dat = dat[2]
+
+			try:
+				modl = models[pos]
+			except Exception as e:
+				print ("POS ERROR: ", pos, len(models), e, dat)
+				continue
+
+
+			for i,v in enumerate(dat['Coeff']):
+				key = "C_{:d}".format(i)
+				modl.params[key].value = v
+
+			modl.eval_nfev += dat['Nfev']
+			modl.eval_nfev += dat['Njac']
+			# model.eval_njac += dat['Njac']
+
+			pkg = (pos,modl)
+			self.eval_in_queue.put( pkg )
+
+
+
+		# get the models back from local evaluation and finish up scoring stuff
+		PPP2 = ppp
+		for i in range(L):
+			if progress and i >= PPP2:
+				print('|',end="",flush=True)
+				PPP2 += ppp
+
+			ret = self.eval_out_queue.get()
+			pos = ret[0]
+			err = ret[1]
+			dat = ret[2]
+
+			try:
+				modl = models[pos]
+			except Exception as e:
+				print ("POS ERROR: ", pos, len(models), e, ret)
+				continue
+
+			if err is not None:
+				# print("ERROR IS NOT NONE", err)
+				modl.error = err
+				modl.exception = dat
+				modl.errored = True
+			else:
+				modl.score = dat['score']
+				modl.r2 = dat['r2']
+				modl.evar = dat['evar']
+				modl.aic = dat['aic']
+				modl.bic = dat['bic']
+				modl.chisqr = dat['chisqr']
+				modl.redchi = dat['redchi']
+
+				modl.eval_nfev += dat['nfev']
+				self.eval_nfev += modl.eval_nfev
+				self.evald_models += 1
+				
+				info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+				print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+				for v in dat['params']:
+					if len(v[0]) == 1 and v[0] == 'C':
+						print("GOT THE SINGULAR: ", v[0], dat['params'])
+						continue
+					# if v[0] in modl.params:
+					modl.params[v[0]].value = v[1]
+
+				if modl.parent_id >= 0:
+					parent = self.memoizer.models[modl.parent_id]
+					# print("  ", parent.id, parent.expr )
+					modl.improve_score = parent.score - modl.score
+					modl.improve_r2 = modl.r2 - parent.r2
+					modl.improve_evar = modl.evar - parent.evar
+					modl.improve_aic = parent.aic - modl.aic
+					modl.improve_bic = parent.bic - modl.bic
+					modl.improve_redchi = parent.redchi - modl.redchi
+				else:
+					# should probaly normalized this across the initial population and permenately set
+					modl.improve_score  = -0.000001 * modl.score
+					modl.improve_r2     = -0.000001 * modl.r2
+					modl.improve_evar   = -0.000001 * modl.evar
+					modl.improve_aic    = -0.000001 * modl.aic
+					modl.improve_bic    = -0.000001 * modl.bic
+					modl.improve_redchi = -0.000001 * modl.redchi
+
+				modl.evaluated = True
+
+		if progress:
+			print("")
+
+
+# ----
+# for i in range(cnt1):
+# 	if progress and i >= PPP:
+# 		print('.',end="",flush=True)
+# 		PPP += ppp
+
+# 	ret = self.ws.recv()
+# 	print("WS RET:", ret)
+
+# 	dat = json.loads(ret)["Payload"]
+
+# 	pos = dat['Pos']
+# 	# err = dat[1]
+# 	# dat = dat[2]
+
+# 	try:
+# 		modl = models[pos]
+# 	except Exception as e:
+# 		print ("POS ERROR: ", pos, len(models), e, dat)
+# 		continue
+
+
+# 	for i,v in enumerate(dat['Coeff']):
+# 		key = "C_{:d}".format(i)
+# 		modl.params[key].value = v
+
+
+# 	passed = evaluate.eval_model(modl, self.vars, self.X_train, self.Y_train, self.err_method, , MAXFEV=3)
+# 	if not passed or modl.error is not None:
+# 		info = "{:5d}  ERROR     ".format(modl.id)
+# 		print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+# 	else:
+# 		# model.eval_nfev += dat['Nfev']
+# 		# model.eval_nfev += dat['Njac']
+# 		# model.eval_njac += dat['Njac']
+# 		self.eval_nfev += modl.eval_nfev
+# 		self.evald_models += 1
+# 		modl.eval_nfev = modl.fit_result.nfev
+
+# 		info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+# 		print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+# 		if modl.parent_id >= 0:
+# 			parent = self.memoizer.get_by_id(modl.parent_id)
+# 			modl.improve_score = parent.score - modl.score
+# 			modl.improve_r2 = modl.r2 - parent.r2
+# 			modl.improve_evar = modl.evar - parent.evar
+# 			modl.improve_aic = parent.aic - modl.aic
+# 			modl.improve_bic = parent.bic - modl.bic
+# 			modl.improve_redchi = parent.redchi - modl.redchi
+# 		else:
+# 			# should probaly normalized this across the initial population and permenately set
+# 			modl.improve_score  = -0.000001 * modl.score
+# 			modl.improve_r2     = -0.000001 * modl.r2
+# 			modl.improve_evar   = -0.000001 * modl.evar
+# 			modl.improve_aic    = -0.000001 * modl.aic
+# 			modl.improve_bic    = -0.000001 * modl.bic
+# 			modl.improve_redchi = -0.000001 * modl.redchi
+
+# if progress:
+# 	print("")

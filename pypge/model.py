@@ -45,11 +45,11 @@ class Model:
 		self.cs = cs
 		self.params = None
 
-
 		# initialization processes
 		self.expr = sympy.expand(self.orig)
 		self.rewrite_coeff()
 		self.jac = [ sympy.diff(self.expr, c) for c in self.cs ]
+		self.guess = [1.0 for c in self.cs]
 		
 
 
