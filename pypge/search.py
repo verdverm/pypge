@@ -117,6 +117,7 @@ class PGE:
 
 		err_columns = [
 			"iteration",
+			"elapsed_seconds",
 			"peekd_models",
 			"evald_models",
 			"peek_fit_loops",
@@ -143,11 +144,7 @@ class PGE:
 		self.logs["stdout"] = sys.stdout
 		for lf in log_files:
 			self.logs[lf] = open(self.log_dir + "pge_" + lf + ".log", "w")
-		# self.logs["main"]   = open(self.log_dir + "pge_main.log", "w")
-		# self.logs["graph"]  = open(self.log_dir + "pge_graph.log", "w")
-		# self.logs["nodes"]  = open(self.log_dir + "pge_nodes.log", "w")
-		# self.logs["errs"]   = open(self.log_dir + "pge_errs.log", "w")
-		# self.logs["final"]   = open(self.log_dir + "pge_final.log", "w")
+
 		print( ' '.join(err_columns), file=self.logs["errs"] )
 
 		# memoizer & grower
@@ -245,6 +242,7 @@ class PGE:
 	def fit(self, X_train,Y_train):
 
 		start = time.time()
+		self.start_time = start
 
 		self.set_data(X_train,Y_train) # *** see note below
 		self.preloop()
@@ -282,8 +280,33 @@ class PGE:
 
 		if self.remote_eval == True:
 			data = {
+				'Kind': "InputPeek",
+				'Payload': self.X_peek.T.tolist()
+			}
+
+			msg = json.dumps(data)
+
+			print("sending InputPeek: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("InputPeek ret: ", ok)
+
+			data = {
+				'Kind': "OutputPeek",
+				'Payload': self.Y_peek.tolist()
+			}
+
+			msg = json.dumps(data)
+
+			print("sending OutputPeek: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("OutputPeek ret: ", ok)
+
+
+			data = {
 				'Kind': "InputData",
-				'Payload': X_train.T.tolist()
+				'Payload': self.X_train.T.tolist()
 			}
 
 			msg = json.dumps(data)
@@ -295,7 +318,7 @@ class PGE:
 
 			data = {
 				'Kind': "OutputData",
-				'Payload': Y_train.tolist()
+				'Payload': self.Y_train.tolist()
 			}
 
 			msg = json.dumps(data)
@@ -335,6 +358,7 @@ class PGE:
 					s += "-> {:4d} ".format(numto)
 				if final:
 					s += T.finalize()
+					s += '      {:10.4f} total runtime'.format(self.curr_time - self.start_time)
 				else:
 					s += T.checkpoint(iarg)
 
@@ -380,7 +404,7 @@ class PGE:
 		if self.peek_npts == 0:
 			to_eval = to_peek
 		else:
-			self.peek_models(to_peek)
+			self.eval_models(to_peek, peek=True)
 			pfunc("peeking", len(to_peek), lognames=["stdout","main"])
 
 			self.peek_push_models(to_peek)
@@ -397,6 +421,7 @@ class PGE:
 		self.eval_push_models(to_eval)
 		pfunc("eval pushing", len(to_eval), lognames=["stdout","main"])
 
+		self.curr_time = time.time()
 		pfunc("total preloop time", -1, final=True, lognames=["stdout","main"])
 
 		if self.log_details:
@@ -427,6 +452,7 @@ class PGE:
 						s += "-> {:4d} ".format(numto)
 					if final:
 						s += T.finalize()
+						s += '      {:10.4f} total runtime'.format(self.curr_time - self.start_time)
 					else:
 						s += T.checkpoint(iarg)
 
@@ -477,7 +503,7 @@ class PGE:
 				to_eval = to_peek
 			else:
 				# peek evaluate the unique models
-				self.peek_models(to_peek)
+				self.eval_models(to_peek, peek=True)
 				pfunc("peeking", len(to_peek), lognames=["stdout","main"])
 
 				# push the peek'd models
@@ -497,11 +523,13 @@ class PGE:
 			self.eval_push_models(to_eval)
 			pfunc("eval pushing", len(to_eval), lognames=["stdout","main"])
 
+			self.curr_time = time.time()
 			pfunc("total loop time", I, final=True, lognames=["stdout","main"])
 			self.print_best(24)
 
-			s = "{:3d} {} {}   {} {} {} {} {}   {} {} {} {}   {} {} {} {}".format(
-					self.curr_iter, 
+			s = "{:3d} {:.4f} {} {}   {} {} {} {} {}   {} {} {} {}   {} {} {} {}".format(
+					self.curr_iter,
+					self.curr_time - self.start_time,
 					self.peekd_models, 
 					self.evald_models,
 
@@ -687,6 +715,7 @@ class PGE:
 			found, f_modl = self.memoizer.lookup(m)
 			# print(i, found, m.id, m.orig)
 			if found:
+				# NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
 				self.GRAPH.add_edge(m.parent_id, f_modl.id, relation=m.gen_relation)
 				s = "{}: EDGE {} -> {} r {}".format(self.curr_iter, m.parent_id, f_modl.id, m.gen_relation)
 				print(s, file=self.logs["graph"])
@@ -702,6 +731,7 @@ class PGE:
 				print(s, file=self.logs["graph"])
 				print(s, m.orig, file=self.logs["nodes"])
 
+				# NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
 				self.GRAPH.add_edge(m.parent_id, m.id, relation=m.gen_relation)
 				s = "{}: edge {} -> {} r {}".format(self.curr_iter, m.parent_id, m.id, m.gen_relation)
 				print(s, file=self.logs["graph"])
@@ -781,19 +811,23 @@ class PGE:
 		return reverse
 
 	def peek_push_models(self, models):
-		# print ("  peek_queue'n:", len(models))
+
+		# for m in models:
+		# 	print(m)
+
 		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
+		
+		print(len(models), " -> ", len(ms))
 		self.nsga2_peek.extend(ms)
-		# self.spea2_peek.extend(ms)
+
 		for m in ms:
 			m.peek_queued = True
 		return ms
 
 	def eval_push_models(self, models):
-		# print ("  eval_queue'n:", len(models))
 		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
 		self.nsga2_list.extend(ms)
-		# self.spea2_list.extend(ms)
+
 		for m in models:
 			m.queued = True
 		return ms
@@ -801,167 +835,58 @@ class PGE:
 
 	def peek_pop(self):
 		
-		# print ("Applying fitness function in peek_pop")
 		self.fitness_calc(self.nsga2_peek)
 
-		nsga2_popd = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
-		# spea2_popd = selection.selSPEA2(self.spea2_peek, self.peek_count)
+		# print(self.nsga2_peek)
 
-		# nsga2_tmp = selection.selNSGA2(self.nsga2_peek, len(self.nsga2_peek))
-		# spea2_tmp = selection.selSPEA2(self.spea2_peek, len(self.spea2_peek))
-		# nsga2_popd, self.nsga2_peek = nsga2_tmp[:self.peek_count], nsga2_tmp[self.peek_count:]
-		# spea2_popd, self.spea2_peek = spea2_tmp[:self.peek_count], spea2_tmp[self.peek_count:]
+		# self.nsga2_peek[0].print_long_columns()
+		# for m in self.nsga2_peek:
+		# 	print(m.print_long())
+
+		nsga2_popd = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
 
 		popd_set = set()
 		for p in nsga2_popd:
 			popd_set.add(p)
-		# for p in spea2_popd:
-		# 	popd_set.add(p)
 
 		popd_list = list(popd_set)
-		# print ("  uniqued peek'd pop'd:")
 		for p in popd_list:
 			p.peek_popped = True
-			# print ("    ", p)
 
 		self.nsga2_peek = [m for m in self.nsga2_peek if not m.peek_popped]
-		# self.spea2_peek = [m for m in self.spea2_peek if not m.peek_popped]
 
-		# print ("  peek_pop'd", len(popd_list), "of", len(self.nsga2_peek) + len(popd_list))
 		return popd_list
 
 	def eval_pop(self):
-		# print ("Applying fitness function in eval_pop")
 		self.fitness_calc(self.nsga2_list)
-
 		nsga2_popd = selection.selNSGA2(self.nsga2_list, self.pop_count, nd='log')
-		# spea2_popd = selection.selSPEA2(self.spea2_list, self.pop_count)
-
-		# nsga2_tmp = selection.selNSGA2(self.nsga2_list, len(self.nsga2_list))
-		# spea2_tmp = selection.selSPEA2(self.spea2_list, len(self.spea2_list))
-		# nsga2_popd, self.nsga2_list = nsga2_tmp[:self.pop_count], nsga2_tmp[self.pop_count:]
-		# spea2_popd, self.spea2_list = spea2_tmp[:self.pop_count], spea2_tmp[self.pop_count:]
 
 		popd_set = set()
 		for p in nsga2_popd:
 			popd_set.add(p)
-		# for p in spea2_popd:
-		# 	popd_set.add(p)
 
 		popd_list = list(popd_set)
-		# print ("  uniqued eval'd pop'd:")
 		for p in popd_list:
 			p.popped = True
-			# print ("    ", p)
 
 		self.nsga2_list = [m for m in self.nsga2_list if not m.popped]
-		# self.spea2_list = [m for m in self.spea2_list if not m.popped]
 
-		# print ("  eval_pop'd", len(popd_list), "of", len(self.nsga2_list) + len(popd_list))
 		return popd_list
 
 
-	def peek_models(self, models):
-		if self.workers > 1:
-			self.peek_models_multiprocess(models)
-		else:
-			# print ("  peek'n:", len(models))
-			for modl in models:
-				passed = evaluate.peex_model(modl, self.vars, self.X_peek, self.Y_peek, self.err_method)
-				if not passed or modl.error is not None:
-					print (modl.error, modl.exception, "\n   ", modl.expr)
-					continue
-				modl.peek_nfev = modl.fit_result.nfev
-				self.peek_nfev += modl.peek_nfev
-				self.peekd_models += 1
 
-				if modl.parent_id >= 0:
-					parent = self.memoizer.get_by_id(modl.parent_id)
-					modl.improve_score = parent.score - modl.score
-					modl.improve_r2 = modl.r2 - parent.r2
-					modl.improve_evar = modl.evar - parent.evar
-					modl.improve_aic = parent.aic - modl.aic
-					modl.improve_bic = parent.bic - modl.bic
-					modl.improve_redchi = parent.redchi - modl.redchi
-				else:
-					# should probaly normalized this across the initial population and permenately set
-					modl.improve_score  = -0.000001 * modl.score
-					modl.improve_r2     = -0.000001 * modl.r2
-					modl.improve_evar   = -0.000001 * modl.evar
-					modl.improve_aic    = -0.000001 * modl.aic
-					modl.improve_bic    = -0.000001 * modl.bic
-					modl.improve_redchi = -0.000001 * modl.redchi
-
-	def peek_models_multiprocess(self, models):
-		# print ("  multi-peek'n:", len(models))
-
-		for i,m in enumerate(models):
-			try:
-				self.peek_in_queue.put( (i,m) )
-			except Exception as e:
-				print ("send error!", e, "\n  ", i, modl.expr)
-				break
-
-		
-		for i in range(len(models)):
-			try:
-				ret = self.peek_out_queue.get()
-			except Exception as e:
-				print ("recv error!", e, "\n  ", i, modl.expr)
-				break
-
-			pos = ret[0]
-			err = ret[1]
-			dat = ret[2]
-			modl = models[ret[0]]
-
-			if err is not None:
-				modl.error = err
-				modl.exception = dat
-				modl.errored = True
-				# print ("GOT HERE ERROR", err, dat)
-			else:
-				modl.score  = dat['score']
-				modl.r2     = dat['r2']
-				modl.evar   = dat['evar']
-				modl.aic    = dat['aic']
-				modl.bic    = dat['bic']
-				modl.chisqr = dat['chisqr']
-				modl.redchi = dat['redchi']
-				
-				modl.peek_score  = modl.score
-				modl.peek_r2     = modl.r2
-				modl.peek_evar   = modl.evar
-				modl.peek_aic    = modl.aic
-				modl.peek_bic    = modl.bic
-				modl.peek_chisqr = modl.chisqr
-				modl.peek_redchi = modl.redchi
-
-				modl.peek_nfev = dat['nfev']
-				self.peek_nfev += modl.peek_nfev
-				self.peekd_models += 1
-				for v in dat['params']:
-					modl.params[v[0]].value = v[1]
-
-				modl.peek_score = dat['score']
-				modl.peek_r2 = dat['r2']
-				modl.peek_evar = dat['evar']
-				modl.peeked = True
-
-
-
-	def eval_models(self, models, progress=True):
+	def eval_models(self, models, peek=False, progress=True):
 
 		if self.remote_eval == True:
-			self.eval_models_remote(models,progress)
+			self.eval_models_remote(models,peek,progress)
 		else:
-			self.eval_models_local(models,progress)
+			self.eval_models_local(models,peek,progress)
 
 
-	def eval_models_local(self, models, progress=False):
+	def eval_models_local(self, models, peek=False, progress=False):
 
 		if self.workers > 1:
-			self.eval_models_multiprocess(models, self.workers, progress)
+			self.eval_models_multiprocess(models, peek, progress)
 
 		else:
 			# print ("  eval'n:", len(models))
@@ -969,7 +894,8 @@ class PGE:
 			ppp = L / 20
 			PPP = ppp
 			if progress:
-				print("     ", L, ppp, "  ", end="", flush=True)
+				which = "peek'n" if peek else "eval'n"
+				print("     ", which, L, ppp, "  ", end="", flush=True)
 			
 			for i,modl in enumerate(models):
 				if progress and i >= PPP:
@@ -1009,7 +935,7 @@ class PGE:
 			print("")
 
 
-	def eval_models_multiprocess(self, models, processes, progress=False):
+	def eval_models_multiprocess(self, models, peek=False, progress=False):
 
 		for i,m in enumerate(models):
 			pkg = (i,m)
@@ -1088,7 +1014,7 @@ class PGE:
 
 
 
-	def eval_models_remote(self, models, progress=False):
+	def eval_models_remote(self, models, peek=False, progress=False):
 
 
 		# Send the models for remote fitting
@@ -1115,7 +1041,7 @@ class PGE:
 			}
 
 			data = {
-				'Kind': "Equation",
+				'Kind': "EvalEqn",
 				'Payload': payload
 			}
 
@@ -1130,7 +1056,8 @@ class PGE:
 		ppp = L / 10
 		PPP = ppp
 		if progress:
-			print("     ", L, ppp, "  ", end="", flush=True)
+			which = "peek'n" if peek else "eval'n"
+			print("     ", which, L, ppp, "  ", end="", flush=True)
 
 		for i in range(L):
 			if progress and i >= PPP:
@@ -1158,12 +1085,18 @@ class PGE:
 				key = "C_{:d}".format(i)
 				modl.params[key].value = v
 
-			modl.eval_nfev += dat['Nfev']
-			modl.eval_nfev += dat['Njac']
-			# model.eval_njac += dat['Njac']
+			if peek:
+				modl.peek_nfev += dat['Nfev']
+				modl.peek_nfev += dat['Njac']
+			else:
+				modl.eval_nfev += dat['Nfev']
+				modl.eval_nfev += dat['Njac']
 
 			pkg = (pos,modl)
-			self.eval_in_queue.put( pkg )
+			if peek:
+				self.peek_in_queue.put( pkg )
+			else:
+				self.eval_in_queue.put( pkg )
 
 
 
@@ -1174,11 +1107,18 @@ class PGE:
 				print('|',end="",flush=True)
 				PPP2 += ppp
 
-			ret = self.eval_out_queue.get()
+			ret = None
+			if peek:
+				ret = self.peek_out_queue.get()
+			else:
+				ret = self.eval_out_queue.get()
 			pos = ret[0]
 			err = ret[1]
 			dat = ret[2]
 
+			# print("ERR: ", err)
+
+			# print("DAT: ", pos, dat)
 			try:
 				modl = models[pos]
 			except Exception as e:
@@ -1199,11 +1139,29 @@ class PGE:
 				modl.chisqr = dat['chisqr']
 				modl.redchi = dat['redchi']
 
-				modl.eval_nfev += dat['nfev']
-				self.eval_nfev += modl.eval_nfev
-				self.evald_models += 1
+				if peek:
+					modl.peek_score  = modl.score
+					modl.peek_r2     = modl.r2
+					modl.peek_evar   = modl.evar
+					modl.peek_aic    = modl.aic
+					modl.peek_bic    = modl.bic
+					modl.peek_chisqr = modl.chisqr
+					modl.peek_redchi = modl.redchi
+
+					modl.peek_nfev = dat['nfev']
+					self.peek_nfev += modl.peek_nfev
+					self.peekd_models += 1
 				
-				info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+					modl.peeked = True
+
+				else:
+					modl.eval_nfev += dat['nfev']
+					self.eval_nfev += modl.eval_nfev
+					self.evald_models += 1
+	
+					modl.evaluated = True
+				
+				info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
 				print(info, modl.expr, modl.jac, file=self.logs["evals"])
 
 				for v in dat['params']:
@@ -1231,71 +1189,6 @@ class PGE:
 					modl.improve_bic    = -0.000001 * modl.bic
 					modl.improve_redchi = -0.000001 * modl.redchi
 
-				modl.evaluated = True
 
 		if progress:
 			print("")
-
-
-# ----
-# for i in range(cnt1):
-# 	if progress and i >= PPP:
-# 		print('.',end="",flush=True)
-# 		PPP += ppp
-
-# 	ret = self.ws.recv()
-# 	print("WS RET:", ret)
-
-# 	dat = json.loads(ret)["Payload"]
-
-# 	pos = dat['Pos']
-# 	# err = dat[1]
-# 	# dat = dat[2]
-
-# 	try:
-# 		modl = models[pos]
-# 	except Exception as e:
-# 		print ("POS ERROR: ", pos, len(models), e, dat)
-# 		continue
-
-
-# 	for i,v in enumerate(dat['Coeff']):
-# 		key = "C_{:d}".format(i)
-# 		modl.params[key].value = v
-
-
-# 	passed = evaluate.eval_model(modl, self.vars, self.X_train, self.Y_train, self.err_method, , MAXFEV=3)
-# 	if not passed or modl.error is not None:
-# 		info = "{:5d}  ERROR     ".format(modl.id)
-# 		print(info, modl.expr, modl.jac, file=self.logs["evals"])
-
-# 	else:
-# 		# model.eval_nfev += dat['Nfev']
-# 		# model.eval_nfev += dat['Njac']
-# 		# model.eval_njac += dat['Njac']
-# 		self.eval_nfev += modl.eval_nfev
-# 		self.evald_models += 1
-# 		modl.eval_nfev = modl.fit_result.nfev
-
-# 		info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
-# 		print(info, modl.expr, modl.jac, file=self.logs["evals"])
-
-# 		if modl.parent_id >= 0:
-# 			parent = self.memoizer.get_by_id(modl.parent_id)
-# 			modl.improve_score = parent.score - modl.score
-# 			modl.improve_r2 = modl.r2 - parent.r2
-# 			modl.improve_evar = modl.evar - parent.evar
-# 			modl.improve_aic = parent.aic - modl.aic
-# 			modl.improve_bic = parent.bic - modl.bic
-# 			modl.improve_redchi = parent.redchi - modl.redchi
-# 		else:
-# 			# should probaly normalized this across the initial population and permenately set
-# 			modl.improve_score  = -0.000001 * modl.score
-# 			modl.improve_r2     = -0.000001 * modl.r2
-# 			modl.improve_evar   = -0.000001 * modl.evar
-# 			modl.improve_aic    = -0.000001 * modl.aic
-# 			modl.improve_bic    = -0.000001 * modl.bic
-# 			modl.improve_redchi = -0.000001 * modl.redchi
-
-# if progress:
-# 	print("")

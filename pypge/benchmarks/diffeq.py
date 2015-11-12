@@ -5,6 +5,8 @@ from scipy.integrate import odeint
 import numpy as np
 np.random.seed(23)
 
+import pandas as pd
+
 T = sympy.Symbol("T")
 
 import pprint

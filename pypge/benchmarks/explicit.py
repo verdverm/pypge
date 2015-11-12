@@ -1,5 +1,6 @@
 import sympy
 import numpy as np
+import pandas as pd
 np.random.seed(23)
 
 import pprint
@@ -28,6 +29,11 @@ def gen(prob_params, **kwargs):
 	prob_params['xpts'] = xpts
 	prob_params['ypure'] = ypure
 	prob_params['ypts'] = ypts
+
+	df = pd.DataFrame(xpts.T,columns=prob_params['xs_str'])
+	df['pure'] = ypure
+	df['target'] = ypts
+	prob_params['df'] = df
 
 	return prob_params
 

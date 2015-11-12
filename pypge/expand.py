@@ -64,6 +64,8 @@ class Grower:
 		# policy configs
 		self.func_level = "linear"     # [linear,nonlin]
 		self.init_level = "low"     # [low,med,high]
+		self.add_xtop = False
+		self.shrinker = False
 
 		# do grow_level this way so we can override the individual ones if we want
 		self.grow_level = kwargs.get("grow_level", "low")   # [low,med,high]
@@ -86,6 +88,8 @@ class Grower:
 		print("subs_lvl:", self.subs_level)
 		print("adds_lvl:", self.adds_level)
 		print("muls_lvl:", self.muls_level)
+		print("add_xtop:", self.add_xtop)
+		print("shrinker:", self.shrinker)
 
 		self.xs_pow1 = [x**(n*(p+1)) for p in range(1) for n in [-1,1] for x in xs]
 		self.xs_pow2 = [x**(n*(p+1)) for p in range(2) for n in [-1,1] for x in xs]
@@ -100,17 +104,20 @@ class Grower:
 
 		self.wout_c_xs1_muls = [ x for x in self.xs_pow1 ]
 		self.wout_c_xs2_muls = [ tpl[0] * tpl[1] for tpl in combos_withR(self.xs_pow1, 2)] + self.wout_c_xs1_muls
-		self.wout_c_xs3_muls = [ tpl[0] * tpl[1] * tpl[2] for tpl in combos_withR(self.xs_pow1, 3)]
+		self.wout_c_xs3_muls = [ tpl[0] * tpl[1] * tpl[2] for tpl in combos_withR(self.xs_pow1, 3)] + self.wout_c_xs2_muls
 		self.wout_c_xs4_muls = [ tpl[0] * tpl[1] * tpl[2] * tpl[3] for tpl in combos_withR(self.xs_pow1, 4)] + self.wout_c_xs3_muls
+
+		self.wout_c_xs3_muls = self._uniquify(self.wout_c_xs3_muls)
+
 		self.with_c_xs1_muls = [ C * m for m in self.wout_c_xs1_muls ]
 		self.with_c_xs2_muls = [ C * m for m in self.wout_c_xs2_muls ]
 		self.with_c_xs3_muls = [ C * m for m in self.wout_c_xs3_muls ]
 		self.with_c_xs4_muls = [ C * m for m in self.wout_c_xs4_muls ]
 
-		# print("wout_c_xs1_muls", self.wout_c_xs1_muls)
-		# print("wout_c_xs2_muls", self.wout_c_xs2_muls)
-		# print("wout_c_xs3_muls", self.wout_c_xs3_muls)
-		# print("wout_c_xs4_muls", self.wout_c_xs4_muls)
+		print("wout_c_xs1_muls", self.wout_c_xs1_muls)
+		print("wout_c_xs2_muls", self.wout_c_xs2_muls)
+		print("wout_c_xs3_muls", self.wout_c_xs3_muls)
+		print("wout_c_xs4_muls", self.wout_c_xs4_muls)
 		# print("with_c_xs1_muls", self.with_c_xs1_muls)
 		# print("with_c_xs2_muls", self.with_c_xs2_muls)
 		# print("with_c_xs3_muls", self.with_c_xs3_muls)
@@ -157,23 +164,23 @@ class Grower:
 				mul_exprs = self.with_c_xs2_muls
 		elif self.init_level == "med":
 			if len(self.xs) > 3:
-				mul_exprs = self.with_c_xs1_muls
+				mul_exprs = self.with_c_xs1_muls + self.with_c_func_exprs
 			elif len(self.xs) > 1:
-				mul_exprs = self.with_c_xs2_muls
+				mul_exprs = self.with_c_xs2_muls + self.with_c_func_exprs
 			else:
-				mul_exprs = self.with_c_xs3_muls
+				mul_exprs = self.with_c_xs3_muls + self.with_c_func_exprs
 		elif self.init_level == "high":
 			if len(self.xs) > 3:
-				mul_exprs = self.with_c_xs2_muls
+				mul_exprs = self.with_c_xs2_muls + self.with_c_func_exprs
 			elif len(self.xs) > 1:
-				mul_exprs = self.with_c_xs3_muls
+				mul_exprs = self.with_c_xs3_muls + self.with_c_func_exprs
 			else:
-				mul_exprs = self.with_c_xs4_muls
+				mul_exprs = self.with_c_xs4_muls + self.with_c_func_exprs
 		else:
 			print("UNKNOWN INIT_LEVEL!!")
 			return
 
-		print("mul_exprs: ", len(mul_exprs))
+		print("mul_exprs: ", len(mul_exprs), mul_exprs)
 
 		mid_exprs = mul_exprs
 		print("mid_exprs: ", len(mid_exprs))
@@ -271,26 +278,34 @@ class Grower:
 	def grow(self, M):
 
 		var_expands = self._var_sub(M.orig)
-		add_biggers = self._add_extend_top_level(M.orig)
 		add_expands = self._add_extend(M.orig)
 		mul_expands = self._mul_extend(M.orig)
 
 		var_expands_C = [ self._toggle_plus_C(e) for e in var_expands ]
-		add_biggers_C = [ self._toggle_plus_C(e) for e in add_biggers ]
 		add_expands_C = [ self._toggle_plus_C(e) for e in add_expands ]
 		mul_expands_C = [ self._toggle_plus_C(e) for e in mul_expands ]
 
 		var_expands = self._uniquify(var_expands + var_expands_C)
-		add_biggers = self._uniquify(add_biggers + add_biggers_C)
 		add_expands = self._uniquify(add_expands + add_expands_C)
 		mul_expands = self._uniquify(mul_expands + mul_expands_C)
+		
+		add_biggers = []
+		if self.add_xtop:
+			add_biggers = self._add_extend_top_level(M.orig)
+			add_biggers_C = [ self._toggle_plus_C(e) for e in add_biggers ]
+			add_biggers = self._uniquify(add_biggers + add_biggers_C)
+
+		shrunk = []
+		if self.shrinker:
+			shrunk = self._shrinker(M.orig)
 
 		var_models = [model.Model(e, p_id=M.id, reln="var_xpnd") for e in var_expands if e != C]
 		big_models = [model.Model(e, p_id=M.id, reln="add_bigr") for e in add_biggers if e != C]
 		add_models = [model.Model(e, p_id=M.id, reln="add_xpnd") for e in add_expands if e != C]
 		mul_models = [model.Model(e, p_id=M.id, reln="mul_xpnd") for e in mul_expands if e != C]
+		shrunk_models = [model.Model(e, p_id=M.id, reln="shrunk") for e in shrunk if e != C]
 
-		models = var_models + big_models + add_models + mul_models
+		models = var_models + big_models + add_models + mul_models + shrunk_models
 		return models
 
 
@@ -387,6 +402,52 @@ class Grower:
 
 		else:
 			return []
+
+	def _shrinker(self, expr):
+		"""
+		this modifies an addition, by removing one term at a time
+		"""
+
+		if expr.is_Atom:
+			return []
+
+		ret_exprs = []
+		new_exprs = []
+
+		# handle this being add  (MUL easy by adding 'or expr.is_Mul') [might want to track separately though]
+		if expr.is_Add:
+			for i,e in enumerate(expr.args):
+				cloned_args = list(expr.args)
+				del cloned_args[i]
+				smaller_add = expr.func(*cloned_args)
+				new_exprs.append(smaller_add)
+		
+		# recursive case
+		args_sets = []
+		for i,e in enumerate(expr.args):
+			if not e.is_Atom:
+				ee = self._shrinker(e)
+				if len(ee) > 0:
+					# We made a removal(s) on an addition down this branch!!
+					for vs in ee:
+						# clone current args
+						cloned_args = list(expr.args)
+						# replace this term in each
+						cloned_args[i] = vs
+						# append to the args_sets
+						args_sets.append(cloned_args)
+
+		# finally, create all of the clones at the current level of recursion
+		for args in args_sets:
+			args = tuple(args)
+			tmp = expr.func(*args)
+			new_exprs.append(tmp)
+
+
+
+		ret_exprs = self._uniquify(new_exprs)
+		return ret_exprs
+
 
 
 

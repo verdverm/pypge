@@ -7,7 +7,7 @@ max_iter: 10
 
 pop_count: 3
 peek_count: 12
-peek_npts: 0
+peek_npts: 100
 
 min_size: 1
 max_size: 64

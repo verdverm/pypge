@@ -4,7 +4,7 @@ from __future__ import division
 import sympy
 import numpy as np
 
-from lmfit import minimize, Parameters
+from lmfit import minimize, Parameters, fit_report
 from sklearn import metrics
 
 
@@ -46,6 +46,7 @@ def Fit(modl, xs, X_train, Y_train, MAXFEV=100):
 	result = None
 	try:
 		result = minimize(fcn2min, modl.params, args=(X_train,Y_train), Dfun=dfunc, col_deriv=1, maxfev=MAXFEV)
+		# print(fit_report(result))
 
 	except Exception as e:
 		modl.exception = str(e)
@@ -54,10 +55,19 @@ def Fit(modl, xs, X_train, Y_train, MAXFEV=100):
 
 	modl.fit_result = result
 
+	# print("GOT HERE...", modl.id, modl.fit_result.success, result.ier)
+	# print(fit_report(modl.fit_result))
+
 	if modl.error == "error":
 		modl.error = "numeric error during fitting"
+	elif result.ier is not None and result.ier == 5:
+		modl.fit_result.success = True
+		# print(fit_report(modl.fit_result))
 	elif not result.success:
 		modl.error = "Error fitting: " + str(result.ier) + "  " + result.message
+		# print("GOT HERE 2: ", modl.error)
+
+	# print("returning: ", modl.id)
 
 
 def Eval(modl, xs, X_input):
@@ -104,51 +114,6 @@ def Score(y_true, y_pred, err_metric):
 
 
 
-def peek_model(modl, vars, X_peek, Y_peek, err_method):
-	# fit the modl
-	Fit(modl, vars, X_peek, Y_peek)
-	if modl.error or not modl.fit_result.success:
-		modl.error = "errored while fitting"
-		modl.errored = True
-		return False
-	
-	# score the modl
-	y_pred = Eval(modl, vars, X_peek)
-
-	modl.score, err = Score(Y_peek, y_pred, err_method)
-	if err is not None:
-		modl.error = "errored while scoring"
-		modl.errored = True
-		return False
-	
-	modl.r2, err = Score(Y_peek, y_pred, "r2")
-	if err is not None:
-		modl.error = "errored while r2'n"
-		modl.errored = True
-		return False
-	
-	modl.evar, err = Score(Y_peek, y_pred, "evar")
-	if err is not None:
-		modl.error = "errored while evar'n"
-		modl.errored = True
-		return False
-	
-	modl.aic = modl.fit_result.aic
-	modl.bic = modl.fit_result.bic
-	modl.chisqr = modl.fit_result.chisqr
-	modl.redchi = modl.fit_result.redchi
-
-	modl.peek_score  = modl.score
-	modl.peek_r2     = modl.r2
-	modl.peek_evar   = modl.evar
-	modl.peek_aic    = modl.aic
-	modl.peek_bic    = modl.bic
-	modl.peek_chisqr = modl.chisqr
-	modl.peek_redchi = modl.redchi
-	
-	modl.peeked = True
-
-	return True # passed
 
 
 def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
@@ -156,7 +121,7 @@ def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
 	# fit the modl
 	Fit(modl, vars, X_train, Y_train, MAXFEV=MAXFEV)
 	if modl.error or not modl.fit_result.success:
-		modl.error = "errored while fitting"
+		modl.error = "errored while fitting: " + modl.error
 		modl.errored = True
 		return False
 	
@@ -165,19 +130,19 @@ def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
 
 	modl.score, err = Score(Y_train, y_pred, err_method)
 	if err is not None:
-		modl.error = "errored while scoring"
+		modl.error = "errored while scoring: " + modl.error
 		modl.errored = True
 		return False
 	
 	modl.r2, err = Score(Y_train, y_pred, "r2")
 	if err is not None:
-		modl.error = "errored while r2'n"
+		modl.error = "errored while r2'n: " + modl.error
 		modl.errored = True
 		return False
 	
 	modl.evar, err = Score(Y_train, y_pred, "evar")
 	if err is not None:
-		modl.error = "errored while evar'n"
+		modl.error = "errored while evar'n: " + modl.error
 		modl.errored = True
 		return False
 
@@ -187,7 +152,7 @@ def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
 	modl.chisqr = modl.fit_result.chisqr
 	modl.redchi = modl.fit_result.redchi
 
-	modl.evaluated = True
+	# modl.evaluated = True
 
 	return True # passed
 

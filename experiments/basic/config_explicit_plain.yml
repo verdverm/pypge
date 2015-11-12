@@ -7,7 +7,7 @@ max_iter: 10
 
 pop_count: 3
 peek_count: 12
-peek_npts: 0
+peek_npts: 100
 
 min_size: 1
 max_size: 64
@@ -23,7 +23,18 @@ usable_funcs: []
  
 algebra_methods: []
 
+grow_params:
+  func_level: "linear"
+  init_level: "med"
+  grow_level: "low"
+  subs_level: "med"
+  add_extendlevel: "low"
+  mul_extend_level: "low"
+
+
+
 err_method: "rmse"
+
 fitness_func_params:
  - "normalize"
  - "-(3)sz"

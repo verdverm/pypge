@@ -21,6 +21,10 @@ from pypge import algebra
 
 ## PEEK EVALUATION MULTIPROCESSING
 def unwrap_self_peek_model_queue(PGE):
+	MAXFEV = 100
+	if PGE.remote_eval == True:
+		MAXFEV = 5
+
 	pos, modl = -1, None
 	while True:
 		try:
@@ -30,12 +34,17 @@ def unwrap_self_peek_model_queue(PGE):
 				break;
 			pos = val[0]
 			modl = val[1]
+			# print("GOT HERE 1:", pos)
 
-			passed = evaluate.peek_model(modl, PGE.vars, PGE.X_peek, PGE.Y_peek, PGE.err_method)
+			passed = False
+			passed = evaluate.eval_model(modl, PGE.vars, PGE.X_peek, PGE.Y_peek, PGE.err_method, MAXFEV=MAXFEV)
 			if not passed:
+				# print("Failed!!", pos, modl.error)
 				PGE.peek_out_queue.put( (pos, modl.error, modl.exception) )
 			else:
+				# print("Passed!!", pos, modl.id)
 				vals = [ (k,v) for (k,v) in modl.params.valuesdict().items() ]
+				# print("GOT HERE 2:", pos)
 				ret_data = {
 					'score': modl.score,
 					'r2': modl.r2,
@@ -47,10 +56,12 @@ def unwrap_self_peek_model_queue(PGE):
 					'params': vals,
 					'nfev': modl.fit_result.nfev
 				}
+				# print("GOT HERE A:", pos)
 				PGE.peek_out_queue.put( (pos, None, ret_data) )
+				# print("GOT HERE B:", pos)
 
 		except Exception as e:
-			print("peek breaking!", e, "\n  ", pos, modl.expr, val)
+			print("peek breaking!", e, "\n  ", pos, modl.id, modl.expr, val)
 			break
 
 
@@ -58,7 +69,7 @@ def unwrap_self_peek_model_queue(PGE):
 def unwrap_self_eval_model_queue(PGE):
 	MAXFEV = 100
 	if PGE.remote_eval == True:
-		MAXFEV = 2
+		MAXFEV = 5
 	while True:
 		try:
 			val = PGE.eval_in_queue.get()

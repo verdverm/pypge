@@ -52,13 +52,19 @@ class Model:
 		self.guess = [1.0 for c in self.cs]
 		
 
-
-
 		# fitness metrics
 		self.sz = 0
+		self.psz = 0
+		self.jsz = 0
+		self.jpsz = 0
+		self.ncs = len(self.cs)
+
 		self.peek_score = None
 		self.peek_r2 = None
 		self.peek_evar = None
+		self.peek_aic = None
+		self.peek_bic = None
+		self.peek_redchi = None
 
 		self.score = None
 		self.r2 = None
@@ -74,15 +80,12 @@ class Model:
 		self.improve_bic = None
 		self.improve_redchi = None
 
-
 		self.fitness = None
 
 		self.fit_result = None
 		self.peek_nfev = 0
 		self.eval_nfev = 0
 		self.total_fev = 0
-
-
 
 		# all done, so we be inited
 		self.inited = True
@@ -97,18 +100,18 @@ class Model:
 	def __str__(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d}  {:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} |  {:s}"
-		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
+		fs = "{:5d}  {:5d}  {:5d}    {:2d}   {:2d}   {:2d}   {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} |  {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(), self.psz, self.jsz, self.jpsz,
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.pretty)
 
 	def print_columns(self):
-		cols =  "      id    pid  sz           "
+		cols =  "      id    iid    pid    sz  psz  jsz  jpsz          "
 		cols += "error         r2     expld_vari          aic              bic            redchi   |      theModel"
 		return cols
 
 	def print_long_columns(self):
-		cols =  "      id    iid    pid  sz           "
+		cols =  "      id    iid    pid    sz  psz  jsz  jpsz          "
 		cols += "error         r2     expld_vari          aic              bic            redchi   |        "
 		cols += "I_error      I_r2    I_expld_vari        I_aic            I_bic          I_redchi        theModel"
 		return cols
@@ -116,8 +119,8 @@ class Model:
 	def print_long(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d}  {:5d}  {:5d}  {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} | {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f}    {:s}"
-		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
+		fs = "{:5d}  {:5d}  {:5d}    {:2d}   {:2d}   {:2d}   {:2d}  {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f} | {:15.6f}  {:10.6f}  {:10.6f}  {:15.6f}  {:15.6f}  {:15.6f}    {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(), self.psz, self.jsz, self.jpsz,
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.improve_score,self.improve_r2,self.improve_evar,self.improve_aic,self.improve_bic,self.improve_redchi,
 			self.pretty)
@@ -125,36 +128,50 @@ class Model:
 	def print_csv(self):
 		if self.pretty is None:
 			self.pretty_expr()
-		fs = "{:5d},  {:5d},  {:5d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:15.6f},  {:15.6f},  {:15.6f},  {:s}"
-		return fs.format(self.id, self.iter_id, self.parent_id, self.size(),
+		fs = "{:5d},  {:5d},  {:5d},  {:2d},  {:2d},  {:2d},  {:2d},  {:15.6f},  {:10.6f},  {:10.6f},  {:15.6f},  {:15.6f},  {:15.6f},  {:s}"
+		return fs.format(self.id, self.iter_id, self.parent_id, self.size(), self.psz, self.jsz, self.jpsz,
 			self.score,self.r2,self.evar,self.aic,self.bic,self.redchi,
 			self.pretty)
 
 	def print_csv_columns(self):
-		cols =  "   id,    iid,    pid,  sz,          "
+		cols =  "   id,    iid,    pid,  sz, psz, jsz, jpsz,         "
 		cols += "error,        r2,       evar,          aic,             bic,          redchi,         theModel"
 		return cols
 
-	def pretty_expr(self, float_format="%.6f"):
+	def pretty_expr(self, float_format="%.4e"):
 		c_sub = [ (str(c), float_format % self.params[str(c)].value) for c in self.cs ]
 		self.pretty = str( self.expr.subs(c_sub) )
 		return self.pretty
 
 	def size(self):
 		if self.sz == 0:
-			self.sz = self.calc_tree_size()
+			self.sz, self.psz = self.calc_tree_size()
+			self.jsz, self.jpsz = self.calc_jac_size()
 		return self.sz
 
 	def calc_tree_size(self):
 		i = 0
+		p = 0
 		for e in sympy.preorder_traversal(self.expr):
 			if e.is_Integer:
 				i += int(abs(e))
 				continue
 			if e.is_Function:
-				i += 2  # add an extra penalty
+				p += 2  # add an extra penalty
 			i+=1
-		return i
+		return i, i+p
+
+	def calc_jac_size(self):
+		i,p = 0,0
+		for jac in self.jac:
+			for e in sympy.preorder_traversal(jac):
+				if e.is_Integer:
+					i += int(abs(e))
+					continue
+				if e.is_Function:
+					p += 2  # add an extra penalty
+				i+=1
+		return i, i+p
 
 	def get_coeff(self):
 		if self.coeff is not None:

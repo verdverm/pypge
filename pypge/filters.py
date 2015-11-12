@@ -25,7 +25,12 @@ def filter_model(modl, expr, filters):
 
 
 def filter_just_C(modl,expr):
-	if modl.orig is C or modl.orig == C:
+	if modl.orig is C or modl.orig == C or modl.orig.is_Number:
+		return True
+	return False
+
+def filter_no_C(modl,expr):
+	if len(modl.cs) == 0:
 		return True
 	return False
 
@@ -52,5 +57,19 @@ def filter_has_big_pow(modl, expr, big=6):
 			return True
 	return False
 
+def filter_has_coeff_pow(modl, expr):
+	if expr.is_Pow:
+		B,E = expr.as_base_exp()
+		if B is C or B == C or B.is_Number:
+			return True
+	return False
 
-default_filters = [filter_too_big,filter_has_int_coeff,filter_has_big_pow,filter_just_C]
+
+default_filters = [
+	filter_too_big,
+	filter_has_int_coeff,
+	filter_has_big_pow,
+	filter_just_C,
+	filter_no_C,
+	filter_has_coeff_pow
+]

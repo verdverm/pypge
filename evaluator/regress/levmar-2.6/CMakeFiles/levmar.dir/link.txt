@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar cq liblevmar.a  CMakeFiles/levmar.dir/lm.c.o CMakeFiles/levmar.dir/Axb.c.o CMakeFiles/levmar.dir/misc.c.o CMakeFiles/levmar.dir/lmlec.c.o CMakeFiles/levmar.dir/lmbc.c.o CMakeFiles/levmar.dir/lmblec.c.o CMakeFiles/levmar.dir/lmbleic.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib liblevmar.a
