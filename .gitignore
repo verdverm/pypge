@@ -57,6 +57,9 @@ docs/_build/
 target/
 
 MANIFEST
-venv
+CHANGELOG.html
+
+venv/
+temp/
 
 .ipynb_checkpoints

@@ -13,5 +13,4 @@ lmfit
 deap
 
 matplotlib
-pydot
 

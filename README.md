@@ -23,6 +23,9 @@ You can install PyPGE with pip.
 
 #### Dependencies
 
+It's recommended to use Python 3 due to GIL thrashing. 
+Learn more starting [here](http://stackoverflow.com/questions/27810561/why-is-my-python-app-stalled-with-system-kernel-cpu-time).
+
 PyPGE depends on several libraries, both Python and other.
 
 Non-Python:

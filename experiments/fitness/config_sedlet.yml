@@ -1,0 +1,44 @@
+name: "explicit_plain"
+
+workers: 2
+queue_size: 4096
+
+max_iter: 12
+
+pop_count: 3
+peek_count: 12
+peek_npts: 100
+
+min_size: 1
+max_size: 64
+min_depth: 1
+max_depth: 6
+
+max_power: 6
+zero_epsilon: 0.000001
+
+excluded_cols: []
+
+usable_funcs: []
+ # - "sin"
+ # - "cos"
+ 
+algebra_methods: []
+
+grow_params:
+  func_level: "linear"
+  init_level: "med"
+  grow_level: "low"
+  subs_level: "med"
+  add_extendlevel: "low"
+  mul_extend_level: "low"
+  add_xtop: false
+  shrinker: false
+
+
+FITNESS_PARAMS
+
+
+print_timing: true
+log_details: true
+

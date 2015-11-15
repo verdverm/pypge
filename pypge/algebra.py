@@ -1,8 +1,10 @@
+from __future__ import print_function
+
 import sympy
 from sympy.strategies.tree import greedy, brute
 sympy.init_printing(use_unicode=True)
 
-import model
+from pypge import model
 
 #### Code below here was pulled from another project
 
@@ -24,18 +26,20 @@ def tree_size(eq):
 
 
 def manip_model(modl, method):
+	# print "      {:8s}  {:s}".format(method, modl.expr)
 	expr, err = do_simp(modl.expr, method)
 	if err is not None:
 		return None, err
 	if expr is None:
-		print "NONE: ", modl.expr, method, " to None"
-		print "  shouldn't get here [ algebra.manip_model() ]"
+		print("NONE: ", modl.expr, method, " to None")
+		print("  shouldn't get here [ algebra.manip_model() ]")
 		return None, None
 
 	if expr == modl.expr:
 		return None, "same"
 
 	ret_modl = model.Model(expr, xs=modl.xs, cs=modl.cs)
+	ret_modl.rewrite_coeff()
 	return ret_modl, None
 
 
