@@ -70,7 +70,6 @@ diffeq_probs=(
 
 experiments=(
 	dev
-	
 	# basic
 
 	# eval_tiers
