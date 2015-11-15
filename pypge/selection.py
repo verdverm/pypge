@@ -80,7 +80,7 @@ def sortNondominated(individuals, k, first_front_only=False):
     map_fit_ind = defaultdict(list)
     for ind in individuals:
         map_fit_ind[ind.fitness].append(ind)
-    fits = map_fit_ind.keys()
+    fits = list(map_fit_ind.keys())
     
     current_front = []
     next_front = []

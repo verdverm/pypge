@@ -23,7 +23,7 @@ from pypge import algebra
 def unwrap_self_peek_model_queue(PGE):
 	MAXFEV = 100
 	if PGE.remote_eval == True:
-		MAXFEV = 5
+		MAXFEV = 2
 
 	pos, modl = -1, None
 	while True:

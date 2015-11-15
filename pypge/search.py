@@ -25,6 +25,8 @@ numpy.random.seed(23)
 from websocket import create_connection
 import json
 
+from pprint import pprint
+
 
 class PGE:
 	
@@ -68,6 +70,9 @@ class PGE:
 			"add_extend_level": "low",
 			"mul_extend_level": "low",
 		}
+
+		self.remote_eval = True
+		self.remote_host = "ws://localhost:8080/echo"
 
 		self.print_timing = False
 		self.log_details = False
@@ -147,17 +152,30 @@ class PGE:
 
 		print( ' '.join(err_columns), file=self.logs["errs"] )
 
-		# memoizer & grower
+		# memoizer
 		self.memoizer = memoize.Memoizer(self.vars)
-		self.grower = expand.Grower(self.vars, self.usable_funcs, **self.grow_params)
-		# self.grower = expand.Grower(self.vars, self.usable_funcs, 
-		# 	func_level=self.func_level, init_level=self.init_level, grow_level=self.grow_level)
 
-		# Pareto Front stuff
-		self.nsga2_peek = []
-		self.spea2_peek = []
+		self.models = []
+		self.hmap = {}
+
+		# legacy single expander heap and grower
 		self.nsga2_list = []
-		self.spea2_list = []
+		self.grower = expand.Grower(self.vars, self.usable_funcs, **self.grow_params)
+
+		# Progressive Evaluation heap
+		self.nsga2_peek = []
+
+		# Progressive Expansion heaps and growers
+		self.multi_expanders = []
+		pprint(self.multi_expander_params)
+		for i,p in enumerate(self.multi_expander_params):
+			expander = {
+			    'pop_count': p.get('pop_count', self.pop_count),
+				'nsga2_list': [],
+				'grower': expand.Grower(self.vars, expand.map_names_to_funcs(p['usable_funcs']), **(p['grow_params']) )
+			}
+			self.multi_expanders.append(expander)
+
 
 		# list of all finalized models
 		self.final = []
@@ -199,21 +217,12 @@ class PGE:
 			self.alge_procs = [mp.Process(target=parallel.unwrap_self_alge_model_queue, args=(self,) ) for i in range(self.workers)]
 
 
-		self.remote_eval = True
-		
+		# possibly connect to remote host via websocket
 		if self.remote_eval == True:
-
-			# self.ws = create_connection("ws://localhost:8080/echo")
-			self.ws = create_connection("ws://192.168.1.5:8080/echo")
+			self.ws = create_connection(self.remote_host)
 
 
-			# print("Sending 'Hello, World'...")
-			# ws.send("Hello, World")
-			# print("Sent")
-			# print("Reeiving...")
-			# result =  ws.recv()
-			# print("Received: ", result)
-			# ws.close()
+	# END OF __init__
 	
 
 	def check_config(self):
@@ -370,7 +379,7 @@ class PGE:
 
 
 		# create first models
-		first_exprs = self.grower.first_exprs()
+		first_exprs = self.multi_expanders[0]['grower'].first_exprs()
 		self.assign_iter_id(first_exprs)
 		pfunc("create first exprs", len(first_exprs), lognames=["stdout","main"])
 
@@ -418,11 +427,17 @@ class PGE:
 		self.eval_models(to_eval)
 		pfunc("evaling", len(to_eval), lognames=["stdout","main"])
 
-		self.eval_push_models(to_eval)
+		# after fully eval'd, push to final_paretos
+		self.final_push(to_eval)
+
+		# self.eval_push_models(to_eval)
+		self.heap_push(self.multi_expanders[0]['nsga2_list'], to_eval)
 		pfunc("eval pushing", len(to_eval), lognames=["stdout","main"])
 
 		self.curr_time = time.time()
 		pfunc("total preloop time", -1, final=True, lognames=["stdout","main"])
+
+		self.print_best(16)
 
 		if self.log_details:
 			for name, file_obj in self.logs.items():
@@ -462,15 +477,36 @@ class PGE:
 						for logname in lognames:
 							print(s, file=L[logname])
 
-			# pop some models, these will be finalized next
-			fromlen = len(self.nsga2_list)
-			popd = self.eval_pop()
-			pfunc("eval popping", fromlen, numto=len(popd), lognames=["stdout","main"])
 
-			# expand these models, popd are finalized
-			expanded = self.expand_models(popd)
+			# Multi expand and grow
+			curr = []
+			prev = []
+			popd = []
+			expanded = []
+			for i,expndr in enumerate(self.multi_expanders):
+				nsga2_list = self.multi_expanders[i]['nsga2_list']
+				pop_count = self.multi_expanders[i]['pop_count']
+				grower = self.multi_expanders[i]['grower']
+
+				if len(prev) > 0:
+					self.heap_push(nsga2_list, prev)
+				
+				fromlen = len(nsga2_list)
+				curr, nsga2_list = self.heap_pop(nsga2_list, pop_count, self.fitness_calc)
+				popd.extend(curr)
+				pfunc("heap " + str(i) + " popping", fromlen, numto=len(curr), lognames=["stdout","main"])
+
+				expand_tmp = self.grow_models(grower,curr)
+				pfunc("popped => expanded", len(curr), numto=len(expand_tmp), lognames=["stdout","main"])
+				expanded.extend(expand_tmp)
+
+				self.multi_expanders[i]['nsga2_list'] = nsga2_list
+				prev = curr
+
+
 			self.assign_iter_id(expanded)
-			pfunc("popped => expanded", len(popd), numto=len(expanded), lognames=["stdout","main"])
+			# pfunc("popped => expanded", len(popd), numto=len(expanded), lognames=["stdout","main"])
+
 
 			# filter and memoize expanded models
 			to_memo = self.filter_models(expanded)			
@@ -519,13 +555,17 @@ class PGE:
 			self.eval_models(to_eval)
 			pfunc("evaling", len(to_eval), lognames=["stdout","main"])
 
+			# after fully eval'd, push to final_paretos
+			self.final_push(to_eval)
+
 			# push fully fit models into the queue for expansion candidacy
-			self.eval_push_models(to_eval)
+			# self.eval_push_models(to_eval)
+			self.heap_push(self.multi_expanders[0]['nsga2_list'], to_eval)
 			pfunc("eval pushing", len(to_eval), lognames=["stdout","main"])
 
 			self.curr_time = time.time()
 			pfunc("total loop time", I, final=True, lognames=["stdout","main"])
-			self.print_best(24)
+			self.print_best(32)
 
 			s = "{:3d} {:.4f} {} {}   {} {} {} {} {}   {} {} {} {}   {} {} {} {}".format(
 					self.curr_iter,
@@ -559,9 +599,10 @@ class PGE:
 
 
 	def print_best(self, count, file=sys.stdout):
-		self.fitness_calc(self.final)
-		best = selection.sortLogNondominated(self.final, count)
-		print ("Best so far", file=file)
+		print ("Best " + str(count) + " of " + str(len(self.final)), file=file)
+		# self.fitness_calc(self.final)
+		models = self.heap_select(self.final, count, self.fitness_calc)
+		best = selection.sortLogNondominated(models, count)
 		print (best[0][0].print_long_columns(), file=file)
 		print ("-----------------------------------------------------------------------------------", file=file)
 		cnt = 0
@@ -577,7 +618,7 @@ class PGE:
 		for front in best:
 			for m in front:
 				if cnt >= count:
-					return
+					break
 				cnt += 1
 				print ("  ", m.print_long(), file=file)
 
@@ -592,11 +633,15 @@ class PGE:
 				self.ave_vari += m.evar
 
 			print ("", file=file)
+			if cnt >= count:
+				break
 
 		self.ave_size /= float(count)
 		self.ave_err /= float(count)
 		self.ave_r2 /= float(count)
 		self.ave_vari /= float(count)
+
+		print ("-----------------------------------------------------------------------------------", file=file)
 
 
 	def print_final_models(self, model_list, count, file=sys.stdout):
@@ -641,16 +686,16 @@ class PGE:
 		print ("num eval evals:  ", self.eval_nfev, self.eval_nfev * self.eval_npts)
 		print ("num total evals: ", self.peek_nfev * self.peek_npts + self.eval_nfev * self.eval_npts)
 		
-		print ("\n\n", nx.info(self.GRAPH), "\n\n")
+		# print ("\n\n", nx.info(self.GRAPH), "\n\n")
 
 		# handle issue with extra stray node with parent_id == -2 (at end of nodes list)
-		del_n = []
-		for n in nx.nodes_iter(self.GRAPH):
-			modl = self.memoizer.get_by_id(n)
-			if modl.score is None:
-				del_n.append(n)
-		for n in del_n:
-			self.GRAPH.remove_node(n)
+		# del_n = []
+		# for n in nx.nodes_iter(self.GRAPH):
+		# 	modl = self.memoizer.get_by_id(n)
+		# 	if modl.score is None:
+		# 		del_n.append(n)
+		# for n in del_n:
+		# 	self.GRAPH.remove_node(n)
 
 
 		if self.workers > 1:
@@ -690,6 +735,15 @@ class PGE:
 		final_list = selection.sortLogNondominated(final, len(final))
 		return final_list
 
+	def grow_models(self, grower, models):
+		expanded = []
+		for p in models:
+			modls = self.grower.grow(p)
+			p.expanded = True
+
+			expanded.extend(modls)
+		return expanded
+
 
 	def expand_models(self, models):
 		expanded = []
@@ -708,35 +762,59 @@ class PGE:
 		passed = filters.filter_models(models, filters.default_filters)
 		return passed
 
-	def memoize_models(self, models):
-		# print ("  MEMOIZING:", len(models))
-		unique = []
-		for i,m in enumerate(models):
-			found, f_modl = self.memoizer.lookup(m)
-			# print(i, found, m.id, m.orig)
-			if found:
-				# NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
-				self.GRAPH.add_edge(m.parent_id, f_modl.id, relation=m.gen_relation)
-				s = "{}: EDGE {} -> {} r {}".format(self.curr_iter, m.parent_id, f_modl.id, m.gen_relation)
-				print(s, file=self.logs["graph"])
 
-			did_ins = self.memoizer.insert(m)
+	def memoize_models(self, models, progress=False):
+		# print ("  MEMOIZING:", len(models))
+		L = len(models)
+		ppp = L / 20
+		PPP = ppp
+		if progress:
+			which = "memo'n"
+			print("     ", which, L, ppp, "  ", end="", flush=True)
+			
+		for i,m in enumerate(models):
+			if progress and i >= PPP:
+				print('.',end="",flush=True)
+				PPP += ppp
+
+
+
+			did_ins = False
+			r = self.hmap.get(m.orig,None)
+			if r is None:
+				did_ins = True
+				m.id = len(self.models)
+				self.models.append(m)
+				self.hmap[m.orig] = m
+
+			# found, f_modl = self.memoizer.lookup(m)
+			# print(i, found, m.id, m.orig)
+			# if found:
+			# 	# NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
+			# 	self.GRAPH.add_edge(m.parent_id, f_modl.id, relation=m.gen_relation)
+			# 	s = "{}: EDGE {} -> {} r {}".format(self.curr_iter, m.parent_id, f_modl.id, m.gen_relation)
+			# 	print(s, file=self.logs["graph"])
+
+			# did_ins = self.memoizer.insert(m)
 			if did_ins:
 				m.memoized = True
-				m.rewrite_coeff()
-				unique.append(m)
+				# unique.append(m)
 				# add node and edge
-				self.GRAPH.add_node(m.id, modl=m)				
-				s = "{}: node {} ".format(self.curr_iter, m.id)
-				print(s, file=self.logs["graph"])
-				print(s, m.orig, file=self.logs["nodes"])
+				# self.GRAPH.add_node(m.id, modl=m)				
+				# s = "{}: node {} ".format(self.curr_iter, m.id)
+				# print(s, file=self.logs["graph"])
+				# print(s, m.orig, file=self.logs["nodes"])
 
-				# NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
-				self.GRAPH.add_edge(m.parent_id, m.id, relation=m.gen_relation)
-				s = "{}: edge {} -> {} r {}".format(self.curr_iter, m.parent_id, m.id, m.gen_relation)
-				print(s, file=self.logs["graph"])
+				# # NEED TO REVERSE SOME EDGES HERE FOR SHRINKING
+				# self.GRAPH.add_edge(m.parent_id, m.id, relation=m.gen_relation)
+				# s = "{}: edge {} -> {} r {}".format(self.curr_iter, m.parent_id, m.id, m.gen_relation)
+				# print(s, file=self.logs["graph"])
 
 		# print ("  UNIQUE:", len(unique),"/",len(models))
+		if progress:
+			print()
+
+		unique = [m for m in models if m.memoized]
 		return unique
 
 	def algebra_models(self, models):
@@ -762,7 +840,7 @@ class PGE:
 			return alges
 
 	def algebra_models_multiprocess(self, models):
-		# print ("  multi-algebra:", len(models))
+		# print ("  multi algebra:", len(models))
 		alges = []
 		
 		for i,m in enumerate(models):
@@ -794,7 +872,6 @@ class PGE:
 				else:
 					print ("Error:", err)
 			else:
-				# print (modl.expr, "==", meth, "==>", manipd.expr, manipd.xs, manipd.cs)
 				manipd.parent_id = modl.id
 				manipd.gen_relation = meth
 				alges.append(manipd)
@@ -802,77 +879,52 @@ class PGE:
 		return alges
 
 
-	def add_rm_const(self, models):
-		# print ("  add_rm_c:", len(models))
-		reverse = []
-		for modl in models:
-			rev = algebra.add_rm_c_term()
-			reverse.append(rev)
-		return reverse
-
 	def peek_push_models(self, models):
-
-		# for m in models:
-		# 	print(m)
 
 		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
 		
-		print(len(models), " -> ", len(ms))
 		self.nsga2_peek.extend(ms)
 
 		for m in ms:
 			m.peek_queued = True
 		return ms
 
-	def eval_push_models(self, models):
-		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
-		self.nsga2_list.extend(ms)
-
-		for m in models:
-			m.queued = True
-		return ms
-
-
 	def peek_pop(self):
 		
 		self.fitness_calc(self.nsga2_peek)
 
-		# print(self.nsga2_peek)
-
-		# self.nsga2_peek[0].print_long_columns()
-		# for m in self.nsga2_peek:
-		# 	print(m.print_long())
-
-		nsga2_popd = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
-
-		popd_set = set()
-		for p in nsga2_popd:
-			popd_set.add(p)
-
-		popd_list = list(popd_set)
-		for p in popd_list:
+		popped = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
+		for p in popped:
 			p.peek_popped = True
 
 		self.nsga2_peek = [m for m in self.nsga2_peek if not m.peek_popped]
 
-		return popd_list
+		return popped
 
-	def eval_pop(self):
-		self.fitness_calc(self.nsga2_list)
-		nsga2_popd = selection.selNSGA2(self.nsga2_list, self.pop_count, nd='log')
 
-		popd_set = set()
-		for p in nsga2_popd:
-			popd_set.add(p)
+	def final_push(self,models):
+		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
+		for p in ms:			
+			self.final.append(p)
+			p.finalized = True
 
-		popd_list = list(popd_set)
-		for p in popd_list:
-			p.popped = True
+	def heap_push(self,heap_list, models):
+		ms = [m for m in models if m is not None and m.errored is False and m.score is not None]
+		heap_list.extend(ms)
+		return ms, heap_list
 
-		self.nsga2_list = [m for m in self.nsga2_list if not m.popped]
+	def heap_pop(self, heap_list, pop_count, fitness_calc):
+		fitness_calc(heap_list)
+		popped = selection.selNSGA2(heap_list, pop_count)
+		# popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+		heap_list = [m for m in heap_list if not m in popped]
+		return popped, heap_list
 
-		return popd_list
-
+	def heap_select(self, heap_list, pop_count, fitness_calc):
+		fitness_calc(heap_list)
+		selected = selection.selNSGA2(heap_list, pop_count)
+		# selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		return selected
 
 
 	def eval_models(self, models, peek=False, progress=True):
@@ -889,9 +941,8 @@ class PGE:
 			self.eval_models_multiprocess(models, peek, progress)
 
 		else:
-			# print ("  eval'n:", len(models))
 			L = len(models)
-			ppp = L / 20
+			ppp = L / 10
 			PPP = ppp
 			if progress:
 				which = "peek'n" if peek else "eval'n"
@@ -907,15 +958,34 @@ class PGE:
 					print(info, modl.expr, modl.jac, file=self.logs["evals"])
 
 				else:
-					self.eval_nfev += modl.eval_nfev
-					self.evald_models += 1
-					modl.eval_nfev = modl.fit_result.nfev
 
-					info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
-					print(info, modl.expr, modl.jac, file=self.logs["evals"])
+					if peek:
+						modl.peek_score  = modl.score
+						modl.peek_r2     = modl.r2
+						modl.peek_evar   = modl.evar
+						modl.peek_aic    = modl.aic
+						modl.peek_bic    = modl.bic
+						modl.peek_chisqr = modl.chisqr
+						modl.peek_redchi = modl.redchi
+
+						modl.peek_nfev = dat['nfev']
+						self.peek_nfev += modl.peek_nfev
+						self.peekd_models += 1
+					
+						modl.peeked = True
+
+					else:
+						modl.eval_nfev += dat['nfev']
+						self.eval_nfev += modl.eval_nfev
+						self.evald_models += 1
+		
+						modl.evaluated = True
+
+					# info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
+					# print(info, modl.expr, modl.jac, file=self.logs["evals"])
 			
 					if modl.parent_id >= 0:
-						parent = self.memoizer.get_by_id(modl.parent_id)
+						parent = self.models[modl.parent_id]
 						modl.improve_score = parent.score - modl.score
 						modl.improve_r2 = modl.r2 - parent.r2
 						modl.improve_evar = modl.evar - parent.evar
@@ -942,10 +1012,11 @@ class PGE:
 			self.eval_in_queue.put( pkg )
 
 		L = len(models)
-		ppp = L / 20
+		ppp = L / 10
 		PPP = ppp
 		if progress:
-			print("     ", L, ppp, "  ", end="", flush=True)
+			which = "peek'n" if peek else "eval'n"
+			print("     ", which, L, ppp, "  ", end="", flush=True)
 
 		for i in range(L):
 			if progress and i >= PPP:
@@ -977,12 +1048,31 @@ class PGE:
 				modl.chisqr = dat['chisqr']
 				modl.redchi = dat['redchi']
 
-				modl.eval_nfev = dat['nfev']
-				self.eval_nfev += modl.eval_nfev
-				self.evald_models += 1
+
+				if peek:
+					modl.peek_score  = modl.score
+					modl.peek_r2     = modl.r2
+					modl.peek_evar   = modl.evar
+					modl.peek_aic    = modl.aic
+					modl.peek_bic    = modl.bic
+					modl.peek_chisqr = modl.chisqr
+					modl.peek_redchi = modl.redchi
+
+					modl.peek_nfev = dat['nfev']
+					self.peek_nfev += modl.peek_nfev
+					self.peekd_models += 1
 				
-				info = "{:5d}  {:5d}     ".format(modl.id, modl.eval_nfev)
-				print(info, modl.expr, modl.jac, file=self.logs["evals"])
+					modl.peeked = True
+
+				else:
+					modl.eval_nfev += dat['nfev']
+					self.eval_nfev += modl.eval_nfev
+					self.evald_models += 1
+	
+					modl.evaluated = True
+				
+				# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
+				# print(info, modl.expr, modl.jac, file=self.logs["evals"])
 
 				for v in dat['params']:
 					if len(v[0]) == 1 and v[0] == 'C':
@@ -991,8 +1081,9 @@ class PGE:
 					# if v[0] in modl.params:
 					modl.params[v[0]].value = v[1]
 
+
 				if modl.parent_id >= 0:
-					parent = self.memoizer.models[modl.parent_id]
+					parent = self.models[modl.parent_id]
 					# print("  ", parent.id, parent.expr )
 					modl.improve_score = parent.score - modl.score
 					modl.improve_r2 = modl.r2 - parent.r2
@@ -1008,8 +1099,6 @@ class PGE:
 					modl.improve_aic    = -0.000001 * modl.aic
 					modl.improve_bic    = -0.000001 * modl.bic
 					modl.improve_redchi = -0.000001 * modl.redchi
-
-				modl.evaluated = True
 
 
 
@@ -1053,6 +1142,7 @@ class PGE:
 
 		# receive the models and send for local evaluation
 		L = len(models)
+		MISSED = 0
 		ppp = L / 10
 		PPP = ppp
 		if progress:
@@ -1066,9 +1156,19 @@ class PGE:
 
 
 			ret = self.ws.recv()
-			# print("WS RET:", ret)
 
-			dat = json.loads(ret)["Payload"]
+			if ret is None:
+				print("WS RET NONE!!!")
+				continue
+			# print("WS RET:", ret,flush=True)
+
+			try:
+				dat = json.loads(ret)["Payload"]
+			except Exception as e:
+				MISSED += 1
+				# print ("DECODE ERROR: ", e, ret)
+				continue
+
 
 			pos = dat['Pos']
 			# err = dat[1]
@@ -1102,7 +1202,7 @@ class PGE:
 
 		# get the models back from local evaluation and finish up scoring stuff
 		PPP2 = ppp
-		for i in range(L):
+		for i in range(L-MISSED):
 			if progress and i >= PPP2:
 				print('|',end="",flush=True)
 				PPP2 += ppp
@@ -1161,8 +1261,8 @@ class PGE:
 	
 					modl.evaluated = True
 				
-				info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
-				print(info, modl.expr, modl.jac, file=self.logs["evals"])
+				# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
+				# print(info, modl.expr, modl.jac, file=self.logs["evals"])
 
 				for v in dat['params']:
 					if len(v[0]) == 1 and v[0] == 'C':
@@ -1172,7 +1272,7 @@ class PGE:
 					modl.params[v[0]].value = v[1]
 
 				if modl.parent_id >= 0:
-					parent = self.memoizer.models[modl.parent_id]
+					parent = self.models[modl.parent_id]
 					# print("  ", parent.id, parent.expr )
 					modl.improve_score = parent.score - modl.score
 					modl.improve_r2 = modl.r2 - parent.r2

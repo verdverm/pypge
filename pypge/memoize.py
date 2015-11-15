@@ -9,27 +9,36 @@ class Memoizer:
 	def __init__(self, variables):
 		self.models = []
 		self.mapper = Mapper(variables)
-		self.memory = Node()
+		self.hmap = {}
 
 	def insert(self,model):
-		expr = model.orig
-		iis, ffs = self.encode(expr)
-		return self.insert_encoded(iis,model)
+		# h = hash(model.orig)
+		# print("ORIG: ", h)
 
-	def insert_encoded(self,iis, model):
-		did_ins = self.memory.insert(iis, model)
-		if did_ins:
-			model.id = len(self.models)
-			self.models.append(model)
-		return did_ins
+		h = model.orig.__hash__()
+
+		r = self.hmap.get(h,None)
+		# conflict
+		if r is not None:
+			return False
+
+		model.id = len(self.models)
+		self.models.append(model)
+		self.hmap[h] = model
+		return True
+
 
 	def lookup(self,model):
-		expr = model.orig
-		iis, ffs = self.encode(expr)
-		return self.memory.lookup(iis)
+		# expr = model.orig
+		# h = hash(expr)
+		h = model.orig.__hash__()
+		r = self.hmap.get(h,None)
+		if r is None:
+			return False,None
+		else:
+			return True,r
 
-	def lookup_encoded(self,iis):
-		return self.memory.lookup(iis)
+
 
 	def encode(self,expr):
 		# print expr
@@ -121,51 +130,51 @@ class Mapper:
 
 
 
-class Node:
+# class Node:
 
-	def __init__(self, key=0, value=None):
-		self.map = {}
-		self.key = key
-		self.value = value
+# 	def __init__(self, key=0, value=None):
+# 		self.map = {}
+# 		self.key = key
+# 		self.value = value
 
 
-	def get_key(self):
-		return self.key
+# 	def get_key(self):
+# 		return self.key
 
-	def get_value(self):
-		return self.value
+# 	def get_value(self):
+# 		return self.value
 
-	def insert(self,iis, value):
-		# print "  processing: ", iis
-		# print "    ", self.key, self.map
-		if len(iis) > 1:
-			ii = iis[0]
-			if ii not in self.map:
-				# print "  new node for key: ", ii
-				self.map[ii] = Node(key=ii)
-			return self.map[ii].insert(iis[1:], value)
-		if len(iis) == 1:
-			ii = iis[0]
-			if ii not in self.map:
-				# print "  new node for key: ", ii
-				self.map[ii] = Node(key=ii, value=value)
-				return True
-			else:
-				return False
-		return False
+# 	def insert(self,iis, value):
+# 		# print "  processing: ", iis
+# 		# print "    ", self.key, self.map
+# 		if len(iis) > 1:
+# 			ii = iis[0]
+# 			if ii not in self.map:
+# 				# print "  new node for key: ", ii
+# 				self.map[ii] = Node(key=ii)
+# 			return self.map[ii].insert(iis[1:], value)
+# 		if len(iis) == 1:
+# 			ii = iis[0]
+# 			if ii not in self.map:
+# 				# print "  new node for key: ", ii
+# 				self.map[ii] = Node(key=ii, value=value)
+# 				return True
+# 			else:
+# 				return False
+# 		return False
 
-	def lookup(self,iis):
-		if len(iis) > 1:
-			ii = iis[0]
-			if ii in self.map:
-				return self.map[ii].lookup(iis[1:])
-			else:
-				return False, None
-		if len(iis) == 1:
-			ii = iis[0]
-			if ii in self.map:
-				return True, self.map[ii].get_value()
-			else:
-				return False, None
-		return False, None
+# 	def lookup(self,iis):
+# 		if len(iis) > 1:
+# 			ii = iis[0]
+# 			if ii in self.map:
+# 				return self.map[ii].lookup(iis[1:])
+# 			else:
+# 				return False, None
+# 		if len(iis) == 1:
+# 			ii = iis[0]
+# 			if ii in self.map:
+# 				return True, self.map[ii].get_value()
+# 			else:
+# 				return False, None
+# 		return False, None
 

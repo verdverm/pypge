@@ -1,9 +1,9 @@
 #!/bin/bash
 
 explicit_probs=(
-	# "koza_01;out"
-	# "koza_02;out"
-	# "koza_03;out"
+	"koza_01;out"
+	"koza_02;out"
+	"koza_03;out"
 	# # "lipson_01;out"
 	# # "lipson_02;out"
 	# # "lipson_03;out"
@@ -19,7 +19,7 @@ explicit_probs=(
 	# "nguyen_09;out"
 	# "nguyen_10;out"
 	# "nguyen_11;out"
-	"nguyen_12;out"
+	# "nguyen_12;out"
 
 	# "korns_01;out"
 	# "korns_02;out"
@@ -65,11 +65,23 @@ diffeq_probs=(
 	# "chaoticpendulum;D_V"
 )
 
+
 # ----------------
 
 experiments=(
+	dev
+	
 	# basic
-	fitness
+
+	# eval_tiers
+	# eval_speedup
+
+	# fitness
+	# expand_levels
+	# expand_ops
+	# expand_tiers
+
+	# lotsa_vars
 )
 
 noise=(
@@ -103,8 +115,8 @@ run_experiment() {
 
 	flags="--target ${target}"
 
-	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
-	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
+	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
+	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
 
 
 }
@@ -136,6 +148,7 @@ experiment_looper () {
 
 echo ""
 
+
 for experiment in ${experiments[@]}; do
 	echo "================================"
 	echo "||          Explicit          ||"
@@ -148,6 +161,8 @@ echo ""
 echo ""
 echo ""
 
+# echo "DEV ROADBLOCK BASH LINE ~150"
+# exit
 
 
 for experiment in ${experiments[@]}; do

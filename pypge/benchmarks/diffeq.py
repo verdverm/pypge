@@ -41,8 +41,10 @@ def gen(prob_params, **kwargs):
 	xs_pure = xs_pure.T
 	xs_pts = []
 	for data in xs_pure:
-		var = np.var(data) * prob_params['noise']**2
-		dpts = data + np.random.normal(0, var, len(data))
+		# var = np.var(data) * prob_params['noise']**2
+		# dpts = data + np.random.normal(0, var, len(data))
+		dpts = data * np.random.normal(1, prob_params['noise'], len(data))
+		
 		xs_pts.append(dpts)
 	xs_pts = np.array(xs_pts)
 

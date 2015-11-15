@@ -39,6 +39,7 @@ def fitness_calc_norm(extractor):
 			vs = extractor(modl)
 			vals.append(vs)
 
+		# print(vals)
 		npvals = np.array(vals).T
 
 		normed = []

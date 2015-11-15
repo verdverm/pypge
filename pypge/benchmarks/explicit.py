@@ -22,8 +22,9 @@ def gen(prob_params, **kwargs):
 	xpts = gen_xpts(prob_params['xs_params'], prob_params['npts'])
 	ypure = sympy.lambdify(prob_params['xs'],eqn,"numpy")(*xpts)
 
-	yvar = np.var(ypure) * prob_params['noise']**2
-	ypts = ypure + np.random.normal(0, yvar, len(ypure))
+	# yvar = np.var(ypure) * prob_params['noise']**2
+	# ypts = ypure + np.random.normal(0, yvar, len(ypure))
+	ypts = ypure * np.random.normal(1, prob_params['noise'], len(ypure))
 
 	prob_params['eqn'] = eqn
 	prob_params['xpts'] = xpts
@@ -180,7 +181,8 @@ def Nguyen_04(**kwargs):
 	this = {
 		'name': "Nguyen_04",
 		'xs_str': ["x"],
-		'eqn_str':  "0.04*x**6 + 0.2*x**5 - 0.4*x**4 + 0.8*x**3 + 3.2*x**2 + x",
+		# 'eqn_str':  "0.04*x**6 + 0.2*x**5 - 0.4*x**4 + 0.8*x**3 + 3.2*x**2 + x",
+		'eqn_str':  "x**6 + x**5 - x**4 + x**3 + x**2 + x",
 		'xs_params': [ (-5.0,5.0) ],
 		'npts': 200,
 		'noise': 10.0

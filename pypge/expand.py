@@ -114,10 +114,10 @@ class Grower:
 		self.with_c_xs3_muls = [ C * m for m in self.wout_c_xs3_muls ]
 		self.with_c_xs4_muls = [ C * m for m in self.wout_c_xs4_muls ]
 
-		print("wout_c_xs1_muls", self.wout_c_xs1_muls)
-		print("wout_c_xs2_muls", self.wout_c_xs2_muls)
-		print("wout_c_xs3_muls", self.wout_c_xs3_muls)
-		print("wout_c_xs4_muls", self.wout_c_xs4_muls)
+		# print("wout_c_xs1_muls", self.wout_c_xs1_muls)
+		# print("wout_c_xs2_muls", self.wout_c_xs2_muls)
+		# print("wout_c_xs3_muls", self.wout_c_xs3_muls)
+		# print("wout_c_xs4_muls", self.wout_c_xs4_muls)
 		# print("with_c_xs1_muls", self.with_c_xs1_muls)
 		# print("with_c_xs2_muls", self.with_c_xs2_muls)
 		# print("with_c_xs3_muls", self.with_c_xs3_muls)
