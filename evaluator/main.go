@@ -55,6 +55,11 @@ type Ret struct {
 	Payload interface{}
 }
 
+type WorkerMsg struct {
+	Kind    string
+	Payload int
+}
+
 type InputMsg struct {
 	Kind    string
 	Payload [][]float64
@@ -101,10 +106,10 @@ func eval(w http.ResponseWriter, r *http.Request) {
 	go responder(c, outgoing)
 
 	eqnin := make(chan EqnMsg, 4096)
-	for i := 0; i < *cpus; i++ {
-		log.Print("Starting processor", i)
-		go eqnProcessor(eqnin, outgoing, i)
-	}
+	//for i := 0; i < *cpus; i++ {
+	//	log.Print("Starting processor", i)
+	//	go eqnProcessor(eqnin, outgoing, i)
+	//}
 
 	for {
 		mt, message, err := c.ReadMessage()
@@ -132,7 +137,7 @@ func responder(c *websocket.Conn, outgoing chan Ret) {
 		}
 
 		rmsg, err := json.Marshal(r)
-
+		// log.Println("SENDING: ", r)
 		err = c.WriteMessage(websocket.TextMessage, rmsg)
 		if err != nil {
 			log.Println("write:", err)
@@ -159,6 +164,24 @@ func handleMessage(msg Msg, orig []byte, outgoing chan Ret, eqnchan chan EqnMsg)
 	ret.Kind = msg.Kind
 
 	switch msg.Kind {
+	case "WorkerCnt":
+		var wmsg WorkerMsg
+		err := json.Unmarshal([]byte(orig), &wmsg)
+		if err != nil {
+			log.Printf("ERROR Unmarshal: ", err)
+			ret.Payload = err.Error()
+		} else {
+			count := wmsg.Payload
+			*cpus = count
+			last := runtime.GOMAXPROCS(count)
+			log.Println("Setting default CPUS to", count, "was", last)
+			ret.Payload = "OK"
+			for i := 0; i < *cpus; i++ {
+				log.Print("Starting processor", i)
+				go eqnProcessor(eqnchan, outgoing, i)
+			}
+		}
+
 	case "InputPeek":
 		var imsg InputMsg
 		err := json.Unmarshal([]byte(orig), &imsg)

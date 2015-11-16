@@ -1,9 +1,9 @@
 #!/bin/bash
 
 explicit_probs=(
-	"koza_01;out"
-	"koza_02;out"
-	"koza_03;out"
+	# "koza_01;out"
+	# "koza_02;out"
+	# "koza_03;out"
 	# # "lipson_01;out"
 	# # "lipson_02;out"
 	# # "lipson_03;out"
@@ -58,7 +58,7 @@ diffeq_probs=(
 	# # "lotkavolterra;D_x"
 	# # "lotkavolterra;D_y"
 	# "predpreyfrac;D_x"
-	# "predpreyfrac;D_y"
+	"predpreyfrac;D_y"
 	# "simplependulum;D_A"
 	# "simplependulum;D_V"
 	# "chaoticpendulum;D_A"
@@ -69,11 +69,11 @@ diffeq_probs=(
 # ----------------
 
 experiments=(
-	dev
+	# dev
 	# basic
 
-	# eval_tiers
 	# eval_speedup
+	# eval_tiers
 
 	# fitness
 	# expand_levels

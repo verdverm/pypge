@@ -203,7 +203,7 @@ class PGE:
 		self.alge_procs = []
 		
 		# multiprocessing stuff
-		if self.workers > 1:
+		if self.workers > 0:
 			self.peek_in_queue = mp.Queue(self.queue_size)
 			self.peek_out_queue = mp.Queue(self.queue_size)
 			self.peek_procs = [mp.Process(target=parallel.unwrap_self_peek_model_queue, args=(self,) ) for i in range(self.workers)]
@@ -220,6 +220,19 @@ class PGE:
 		# possibly connect to remote host via websocket
 		if self.remote_eval == True:
 			self.ws = create_connection(self.remote_host)
+			data = {
+				'Kind': "WorkerCnt",
+				'Payload': self.workers
+			}
+
+			msg = json.dumps(data)
+
+			print("sending WorkerCnt: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("WorkerCnt ret: ", ok)
+
+
 
 
 	# END OF __init__
@@ -343,7 +356,7 @@ class PGE:
 		# preloop setup (generates,evals,queues first models)
 		print ("Preloop setup")
 
-		if self.workers > 1:
+		if self.workers > 0:
 			for proc in self.peek_procs:
 				proc.start()
 			for proc in self.eval_procs:
@@ -698,7 +711,7 @@ class PGE:
 		# 	self.GRAPH.remove_node(n)
 
 
-		if self.workers > 1:
+		if self.workers > 0:
 			print ("\n\nstopping workers")
 			for proc in self.peek_procs:
 				self.peek_in_queue.put(None)
@@ -818,7 +831,7 @@ class PGE:
 		return unique
 
 	def algebra_models(self, models):
-		if self.workers > 1:
+		if self.workers > 0:
 			return self.algebra_models_multiprocess(models)
 		else:
 			# print ("  algebra:", len(models))
@@ -937,7 +950,7 @@ class PGE:
 
 	def eval_models_local(self, models, peek=False, progress=False):
 
-		if self.workers > 1:
+		if self.workers > 0:
 			self.eval_models_multiprocess(models, peek, progress)
 
 		else:

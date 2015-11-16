@@ -69,7 +69,7 @@ def unwrap_self_peek_model_queue(PGE):
 def unwrap_self_eval_model_queue(PGE):
 	MAXFEV = 100
 	if PGE.remote_eval == True:
-		MAXFEV = 5
+		MAXFEV = 2
 	while True:
 		try:
 			val = PGE.eval_in_queue.get()
