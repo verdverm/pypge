@@ -751,25 +751,10 @@ class PGE:
 	def grow_models(self, grower, models):
 		expanded = []
 		for p in models:
-			modls = self.grower.grow(p)
-			p.expanded = True
-
+			modls = grower.grow(p)
 			expanded.extend(modls)
 		return expanded
 
-
-	def expand_models(self, models):
-		expanded = []
-		for p in models:
-			modls = self.grower.grow(p)
-			p.expanded = True
-
-			expanded.extend(modls)
-			
-			self.final.append(p)
-			p.finalized = True
-
-		return expanded
 
 	def filter_models(self, models):
 		passed = filters.filter_models(models, filters.default_filters)
@@ -928,15 +913,15 @@ class PGE:
 
 	def heap_pop(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		popped = selection.selNSGA2(heap_list, pop_count)
-		# popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+		# popped = selection.selNSGA2(heap_list, pop_count)
+		popped = selection.selNSGA2(heap_list, pop_count, nd='log')
 		heap_list = [m for m in heap_list if not m in popped]
 		return popped, heap_list
 
 	def heap_select(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		selected = selection.selNSGA2(heap_list, pop_count)
-		# selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		# selected = selection.selNSGA2(heap_list, pop_count)
+		selected = selection.selNSGA2(heap_list, pop_count, nd='log')
 		return selected
 
 

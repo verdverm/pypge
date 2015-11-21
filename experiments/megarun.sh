@@ -8,22 +8,22 @@ explicit_probs=(
 	# # "lipson_02;out"
 	# # "lipson_03;out"
 
-	# "nguyen_01;out"
+	# # "nguyen_01;out"
 	# "nguyen_02;out"
 	# "nguyen_03;out"
 	# "nguyen_04;out"
 	# "nguyen_05;out"
-	# "nguyen_06;out"
+	"nguyen_06;out"
 	# # "nguyen_07;out"
 	# # "nguyen_08;out"
-	# "nguyen_09;out"
-	# "nguyen_10;out"
-	# "nguyen_11;out"
-	# "nguyen_12;out"
+	"nguyen_09;out"
+	# # "nguyen_10;out"
+	# # "nguyen_11;out"
+	"nguyen_12;out"
 
 	# "korns_01;out"
 	# "korns_02;out"
-	# "korns_03;out"
+	"korns_03;out"
 	# "korns_04;out"
 	# # "korns_05;out"
 	# # "korns_06;out"
@@ -58,7 +58,7 @@ diffeq_probs=(
 	# # "lotkavolterra;D_x"
 	# # "lotkavolterra;D_y"
 	# "predpreyfrac;D_x"
-	"predpreyfrac;D_y"
+	# "predpreyfrac;D_y"
 	# "simplependulum;D_A"
 	# "simplependulum;D_V"
 	# "chaoticpendulum;D_A"
@@ -73,12 +73,10 @@ experiments=(
 	# basic
 
 	# eval_speedup
-	# eval_tiers
 
 	# fitness
-	# expand_levels
+	expand_levels
 	# expand_ops
-	# expand_tiers
 
 	# lotsa_vars
 )
@@ -114,8 +112,8 @@ run_experiment() {
 
 	flags="--target ${target}"
 
-	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
-	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
+	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
+	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
 
 
 }

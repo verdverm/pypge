@@ -41,9 +41,12 @@ def gen(prob_params, **kwargs):
 	xs_pure = xs_pure.T
 	xs_pts = []
 	for data in xs_pure:
-		# var = np.var(data) * prob_params['noise']**2
-		# dpts = data + np.random.normal(0, var, len(data))
-		dpts = data * np.random.normal(1, prob_params['noise'], len(data))
+		dpts = data
+		if prob_params['noise_type'] == "var":
+			var = np.var(data) * prob_params['noise']**2
+			dpts = data + np.random.normal(0, var, len(data))
+		elif prob_params['noise_type'] == "percent":
+			dpts = data * np.random.normal(1, prob_params['noise'], len(data))
 		
 		xs_pts.append(dpts)
 	xs_pts = np.array(xs_pts)
@@ -59,6 +62,7 @@ def prep_params(prob_params, **kwargs):
 	prob_params['xs'] = sympy.symbols(prob_params['xs_str'])
 	prob_params['dxs_str'] = ["d"+x for x in prob_params['xs_str']]
 	prob_params['dxs'] = sympy.symbols(prob_params['dxs_str'])
+	prob_params['noise_type'] = "percent"
 
 	# override locals with kwargs
 	for key, value in kwargs.items():

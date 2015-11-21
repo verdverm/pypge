@@ -22,9 +22,12 @@ def gen(prob_params, **kwargs):
 	xpts = gen_xpts(prob_params['xs_params'], prob_params['npts'])
 	ypure = sympy.lambdify(prob_params['xs'],eqn,"numpy")(*xpts)
 
-	# yvar = np.var(ypure) * prob_params['noise']**2
-	# ypts = ypure + np.random.normal(0, yvar, len(ypure))
-	ypts = ypure * np.random.normal(1, prob_params['noise'], len(ypure))
+	ypts = ypure
+	if prob_params['noise_type'] == "var":
+		yvar = np.var(ypure) * prob_params['noise']**2
+		ypts = ypure + np.random.normal(0, yvar, len(ypure))
+	elif prob_params['noise_type'] == "percent":
+		ypts = ypure * np.random.normal(1, prob_params['noise'], len(ypure))
 
 	prob_params['eqn'] = eqn
 	prob_params['xpts'] = xpts
@@ -41,6 +44,7 @@ def gen(prob_params, **kwargs):
 
 def prep_params(prob_params, **kwargs):
 	prob_params['xs'] = sympy.symbols(prob_params['xs_str'])
+	prob_params['noise_type'] = "percent"
 
 	# override locals with kwargs
 	for key, value in kwargs.items():
@@ -81,7 +85,7 @@ def Koza_01(**kwargs):
 	this = {
 		'name': "Koza_01",
 		'xs_str': ["x"],
-		'eqn_str': "0.2*x**4 + 0.5*x**3 + 1.4*x**2 + 2.3*x",
+		'eqn_str': "x**4 + x**3 + x**2 + x",
 		'xs_params': [ (-4.0,4.0) ],
 		'npts': 200,
 		'noise': 5.0
@@ -92,7 +96,7 @@ def Koza_02(**kwargs):
 	this = {
 		'name': "Koza_02",
 		'xs_str': ["x"],
-		'eqn_str': "0.07*x**5 - 2*x**3 + 1.5*x",
+		'eqn_str': "x**5 - 2*x**3 + x",
 		'xs_params': [ (-6.0,6.0) ],
 		'npts': 200,
 		'noise': 10.0
@@ -103,7 +107,7 @@ def Koza_03(**kwargs):
 	this = {
 		'name': "Koza_03",
 		'xs_str': ["x"],
-		'eqn_str': "0.3*x**6 - 2*x**4 + 1.3*x**2",
+		'eqn_str': "x**6 - 2*x**4 + x**2",
 		'xs_params': [ (-4.0,4.0) ],
 		'npts': 200,
 		'noise': 10.0
@@ -170,7 +174,7 @@ def Nguyen_03(**kwargs):
 	this = {
 		'name': "Nguyen_03",
 		'xs_str': ["x"],
-		'eqn_str':  "-0.05*x**5 + 0.3*x**4 + 1.2*x**3 - 3.4*x**2 - x",
+		'eqn_str':  "x**5 + x**4 + x**3 + x**2 + x",
 		'xs_params': [ (-5.0,5.0) ],
 		'npts': 200,
 		'noise': 10.0
@@ -182,7 +186,7 @@ def Nguyen_04(**kwargs):
 		'name': "Nguyen_04",
 		'xs_str': ["x"],
 		# 'eqn_str':  "0.04*x**6 + 0.2*x**5 - 0.4*x**4 + 0.8*x**3 + 3.2*x**2 + x",
-		'eqn_str':  "x**6 + x**5 - x**4 + x**3 + x**2 + x",
+		'eqn_str':  "x**6 + x**5 + x**4 + x**3 + x**2 + x",
 		'xs_params': [ (-5.0,5.0) ],
 		'npts': 200,
 		'noise': 10.0
@@ -296,7 +300,7 @@ def Korns_01(**kwargs):
 			(-5.0,5.0),
 			(-5.0,5.0)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -313,7 +317,7 @@ def Korns_02(**kwargs):
 			(-0.4, 0.4),
 			(-0.4, 0.4)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -330,7 +334,7 @@ def Korns_03(**kwargs):
 			(-0.4, 0.4),
 			(-0.4, 0.4)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -347,7 +351,7 @@ def Korns_04(**kwargs):
 			(-10.0,10.0),
 			(-10.0,10.0)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 0.0025
 	}
 	return gen(this,**kwargs)
@@ -415,7 +419,7 @@ def Korns_08(**kwargs):
 			(0.0001,10.0),
 			(0.0001,10.0)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -432,7 +436,7 @@ def Korns_09(**kwargs):
 			(0.1,4.0),
 			(0.1,4.0)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -449,7 +453,7 @@ def Korns_10(**kwargs):
 			(-1.0,1.0),
 			(-1.0,1.0)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -466,7 +470,7 @@ def Korns_11(**kwargs):
 			(-1.47,1.47),
 			(-1.47,1.47)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -483,7 +487,7 @@ def Korns_12(**kwargs):
 			(-1.47,1.47),
 			(-1.47,1.47)
 		],
-		'npts': 2000,
+		'npts': 10000,
 		'noise': 0.1
 	}
 	return gen(this,**kwargs)
@@ -500,7 +504,7 @@ def Korns_13(**kwargs):
 			(-3.14,3.14),
 			(-3.14,3.14)
 		],
-		'npts': 4000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -517,7 +521,7 @@ def Korns_14(**kwargs):
 			(-3.14,3.14),
 			(-3.14,3.14)
 		],
-		'npts': 4000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)
@@ -534,7 +538,7 @@ def Korns_15(**kwargs):
 			(-3.14,3.14),
 			(-3.14,3.14)
 		],
-		'npts': 4000,
+		'npts': 10000,
 		'noise': 1.0
 	}
 	return gen(this,**kwargs)

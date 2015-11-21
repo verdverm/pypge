@@ -66,6 +66,7 @@ class Grower:
 		self.init_level = "low"     # [low,med,high]
 		self.add_xtop = False
 		self.shrinker = False
+		self.limiting_depth = 4
 
 		# do grow_level this way so we can override the individual ones if we want
 		self.grow_level = kwargs.get("grow_level", "low")   # [low,med,high]
@@ -90,6 +91,7 @@ class Grower:
 		print("muls_lvl:", self.muls_level)
 		print("add_xtop:", self.add_xtop)
 		print("shrinker:", self.shrinker)
+		print("limdepth:", self.limiting_depth)
 
 		self.xs_pow1 = [x**(n*(p+1)) for p in range(1) for n in [-1,1] for x in xs]
 		self.xs_pow2 = [x**(n*(p+1)) for p in range(2) for n in [-1,1] for x in xs]
@@ -214,6 +216,8 @@ class Grower:
 
 		add_terms = [ C*x+C for x in self.xs ]
 
+
+		DO + SOMETHING ? HERE = (.)(.)
 		self.var_sub_dep_lim_terms = self.wout_c_xs2_muls
 		self.var_sub_dep_terms = self.var_sub_dep_lim_terms + self.wout_c_func_exprs
 
@@ -339,12 +343,12 @@ class Grower:
 					## Lets make a variable substitution !!
 					## First, whats the context? what are we going to substitute?
 					sub_terms = None
-					if depth > 3:
+					if depth >= self.limiting_depth:
 						sub_terms = self.var_sub_dep_terms
 					else:
 						sub_terms = self.var_sub_terms
 					if limit_sub:
-						if depth > 3:
+						if depth >= self.limiting_depth:
 							sub_terms = self.var_sub_dep_lim_terms
 						else:
 							sub_terms = self.var_sub_lim_terms
