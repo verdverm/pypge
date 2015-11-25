@@ -217,7 +217,7 @@ class Grower:
 		add_terms = [ C*x+C for x in self.xs ]
 
 
-		DO + SOMETHING ? HERE = (.)(.)
+		# DO + SOMETHING ? HERE = (.)(.)
 		self.var_sub_dep_lim_terms = self.wout_c_xs2_muls
 		self.var_sub_dep_terms = self.var_sub_dep_lim_terms + self.wout_c_func_exprs
 
@@ -230,6 +230,8 @@ class Grower:
 			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
 
 		elif self.subs_level == "high":
+			self.var_sub_dep_lim_terms += add_terms
+			self.var_sub_dep_terms += add_terms
 			self.var_sub_lim_terms = self.wout_c_xs3_muls + add_terms
 			self.var_sub_terms = self.var_sub_lim_terms + self.wout_c_func_exprs
 

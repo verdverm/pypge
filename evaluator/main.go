@@ -5,6 +5,7 @@ import (
 	"flag"
 	// "fmt"
 	"log"
+	"math"
 	"net/http"
 	"runtime"
 
@@ -88,10 +89,18 @@ type EqnPayload struct {
 type EqnRet struct {
 	Pos   int       `json:pos`
 	Id    int       `json:id`
-	Score float64   `json:score`
 	Coeff []float64 `json:coeff`
 	Nfev  int       `json:nfev`
 	Njac  int       `json:njac`
+
+	Score  float64 `json:score`
+	R2     float64 `json:r2`
+	Evar   float64 `json:evar`
+	Adj_r2 float64 `json:adj_r2`
+	Aic    float64 `json:aic`
+	Bic    float64 `json:bic`
+	Chisqr float64 `json:chisqr`
+	Redchi float64 `json:redchi`
 }
 
 func eval(w http.ResponseWriter, r *http.Request) {
@@ -300,6 +309,16 @@ func handleEqnMessage(msg EqnPayload, kind string) EqnRet {
 	r.Nfev = nfev
 	r.Njac = njac
 
+	r2, evar, adj_r2, aic, bic, chisqr, redchi := scoreEqn(e, coeff, Input, Output)
+
+	r.R2 = r2
+	r.Evar = evar
+	r.Adj_r2 = adj_r2
+	r.Aic = aic
+	r.Bic = bic
+	r.Chisqr = chisqr
+	r.Redchi = redchi
+
 	return r
 }
 
@@ -389,6 +408,64 @@ func fitEqn(e eqn.Eqn, jac []eqn.Eqn, Guess []float64, In [][]float64, Out []flo
 	njac := int(info[8])
 
 	return coeff, train_err, nfev, njac
+}
+
+func scoreEqn(e eqn.Eqn, Coeff []float64, In [][]float64, Out []float64) ([]float64, float64, int, int) {
+	L = len(Out)
+	fL = float64(L)
+	fC = float64(len(Coeff))
+	output := make([]float64, L)
+	residuals := make([]float64, L)
+
+	sum_y := 0.0
+	sum_out := 0.0
+	for i, input := range In {
+		out = e.Eval(0, input, Coeff, nil)
+		output[i] = out
+		sum_out += out
+		sum_y += Out[i]
+	}
+	ave_out := sum_out / fL
+	ave_y := sum_y / fL
+
+	ss_var := 0.0
+	ss_tot := 0.0
+	ss_reg := 0.0
+	ss_res := 0.0
+
+	for i, o_val := range Out {
+		ss_var_i := output[i] - ave_out
+		ss_var += ss_var_i
+
+		ss_tot_i := Out[i] - ave_y
+		ss_tot += ss_tot_i * ss_tot_i
+
+		ss_reg_i := output[i] - ave_y
+		ss_reg += ss_reg_i * ss_reg_i
+
+		ss_res_i := output[i] - Out[i]
+		ss_res += ss_res_i * ss_res_i
+	}
+	variance := ss_var / (fL - 1.0)
+	r_squared := 1.0 - (ss_res / ss_tot)
+	explained_var := ss_reg / ss_tot
+	adj_r_squared := r_squared - (1.0-r_squared)*fC/(fL-fC-1.0)
+
+	LL := math.Pow((1.0/math.Sqrt(2.0*math.Pi*variance)), N) * math.Exp(-ss_var/(variance*2.0))
+	log_like := math.Log(LL)
+
+	aic := 2.0*fC - 2.0*log_like
+	bic := fC*math.Log(fL) - 2.0*log_like
+
+	chi_squared := 0.0
+	for i, o_val := range Out {
+		chi_i := (output[i] - ave_out) / variance
+		chi_squared += chi_i
+
+	}
+	reduced_chi_squared := chi_squared / (fL - fC - 1.0)
+	return r_squared, explained_var, adj_r_squared, aic, bic, chi_squared, reduced_chi_squared
+
 }
 
 func main() {

@@ -1164,13 +1164,11 @@ class PGE:
 				dat = json.loads(ret)["Payload"]
 			except Exception as e:
 				MISSED += 1
-				# print ("DECODE ERROR: ", e, ret)
+				print ("DECODE ERROR: ", e, ret)
 				continue
 
 
 			pos = dat['Pos']
-			# err = dat[1]
-			# dat = dat[2]
 
 			try:
 				modl = models[pos]
@@ -1190,103 +1188,167 @@ class PGE:
 				modl.eval_nfev += dat['Nfev']
 				modl.eval_nfev += dat['Njac']
 
-			pkg = (pos,modl)
+			# modl.score = dat['Score']
+			modl.mae = dat['Mae']
+			modl.mse = dat['Mse']
+			modl.rmae = dat['Rmae']
+			modl.rmse = dat['Rmse']
+			modl.r2 = dat['R2']
+			modl.adj_r2 = dat['Adj_r2']
+			modl.evar = dat['Evar']
+			modl.aic = dat['Aic']
+			modl.bic = dat['Bic']
+			modl.chisqr = dat['Chisqr']
+			modl.redchi = dat['Redchi']
+
+			modl.score = getattr(modl,self.err_method)
+
+
 			if peek:
-				self.peek_in_queue.put( pkg )
+				modl.peek_score  = modl.score
+				modl.peek_r2     = modl.r2
+				modl.peek_evar   = modl.evar
+				modl.peek_aic    = modl.aic
+				modl.peek_bic    = modl.bic
+				modl.peek_chisqr = modl.chisqr
+				modl.peek_redchi = modl.redchi
+
+				self.peek_nfev += modl.peek_nfev
+				self.peekd_models += 1
+			
+				modl.peeked = True
+
 			else:
-				self.eval_in_queue.put( pkg )
+				self.eval_nfev += modl.eval_nfev
+				self.evald_models += 1
+
+				modl.evaluated = True
 
 
 
-		# get the models back from local evaluation and finish up scoring stuff
-		PPP2 = ppp
-		for i in range(L-MISSED):
-			if progress and i >= PPP2:
-				print('|',end="",flush=True)
-				PPP2 += ppp
-
-			ret = None
-			if peek:
-				ret = self.peek_out_queue.get()
+			if modl.parent_id >= 0:
+				parent = self.models[modl.parent_id]
+				# print("  ", parent.id, parent.expr )
+				modl.improve_score = parent.score - modl.score
+				modl.improve_r2 = modl.r2 - parent.r2
+				modl.improve_evar = modl.evar - parent.evar
+				modl.improve_aic = parent.aic - modl.aic
+				modl.improve_bic = parent.bic - modl.bic
+				modl.improve_redchi = parent.redchi - modl.redchi
 			else:
-				ret = self.eval_out_queue.get()
-			pos = ret[0]
-			err = ret[1]
-			dat = ret[2]
-
-			# print("ERR: ", err)
-
-			# print("DAT: ", pos, dat)
-			try:
-				modl = models[pos]
-			except Exception as e:
-				print ("POS ERROR: ", pos, len(models), e, ret)
-				continue
-
-			if err is not None:
-				# print("ERROR IS NOT NONE", err)
-				modl.error = err
-				modl.exception = dat
-				modl.errored = True
-			else:
-				modl.score = dat['score']
-				modl.r2 = dat['r2']
-				modl.evar = dat['evar']
-				modl.aic = dat['aic']
-				modl.bic = dat['bic']
-				modl.chisqr = dat['chisqr']
-				modl.redchi = dat['redchi']
-
-				if peek:
-					modl.peek_score  = modl.score
-					modl.peek_r2     = modl.r2
-					modl.peek_evar   = modl.evar
-					modl.peek_aic    = modl.aic
-					modl.peek_bic    = modl.bic
-					modl.peek_chisqr = modl.chisqr
-					modl.peek_redchi = modl.redchi
-
-					modl.peek_nfev = dat['nfev']
-					self.peek_nfev += modl.peek_nfev
-					self.peekd_models += 1
-				
-					modl.peeked = True
-
-				else:
-					modl.eval_nfev += dat['nfev']
-					self.eval_nfev += modl.eval_nfev
-					self.evald_models += 1
-	
-					modl.evaluated = True
-				
-				# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
-				# print(info, modl.expr, modl.jac, file=self.logs["evals"])
-
-				for v in dat['params']:
-					if len(v[0]) == 1 and v[0] == 'C':
-						print("GOT THE SINGULAR: ", v[0], dat['params'])
-						continue
-					# if v[0] in modl.params:
-					modl.params[v[0]].value = v[1]
-
-				if modl.parent_id >= 0:
-					parent = self.models[modl.parent_id]
-					# print("  ", parent.id, parent.expr )
-					modl.improve_score = parent.score - modl.score
-					modl.improve_r2 = modl.r2 - parent.r2
-					modl.improve_evar = modl.evar - parent.evar
-					modl.improve_aic = parent.aic - modl.aic
-					modl.improve_bic = parent.bic - modl.bic
-					modl.improve_redchi = parent.redchi - modl.redchi
-				else:
-					# should probaly normalized this across the initial population and permenately set
-					modl.improve_score  = -0.000001 * modl.score
-					modl.improve_r2     = -0.000001 * modl.r2
-					modl.improve_evar   = -0.000001 * modl.evar
-					modl.improve_aic    = -0.000001 * modl.aic
-					modl.improve_bic    = -0.000001 * modl.bic
-					modl.improve_redchi = -0.000001 * modl.redchi
+				# should probaly normalized this across the initial population and permenately set
+				modl.improve_score  = -0.000001 * modl.score
+				modl.improve_r2     = -0.000001 * modl.r2
+				modl.improve_evar   = -0.000001 * modl.evar
+				modl.improve_aic    = -0.000001 * modl.aic
+				modl.improve_bic    = -0.000001 * modl.bic
+				modl.improve_redchi = -0.000001 * modl.redchi
 
 
 		if progress:
 			print("")
+
+
+
+
+
+		# 	pkg = (pos,modl)
+		# 	if peek:
+		# 		self.peek_in_queue.put( pkg )
+		# 	else:
+		# 		self.eval_in_queue.put( pkg )
+
+
+
+		# # get the models back from local evaluation and finish up scoring stuff
+		# PPP2 = ppp
+		# for i in range(L-MISSED):
+		# 	if progress and i >= PPP2:
+		# 		print('|',end="",flush=True)
+		# 		PPP2 += ppp
+
+		# 	ret = None
+		# 	if peek:
+		# 		ret = self.peek_out_queue.get()
+		# 	else:
+		# 		ret = self.eval_out_queue.get()
+		# 	pos = ret[0]
+		# 	err = ret[1]
+		# 	dat = ret[2]
+
+		# 	# print("ERR: ", err)
+
+		# 	# print("DAT: ", pos, dat)
+		# 	try:
+		# 		modl = models[pos]
+		# 	except Exception as e:
+		# 		print ("POS ERROR: ", pos, len(models), e, ret)
+		# 		continue
+
+		# 	if err is not None:
+		# 		# print("ERROR IS NOT NONE", err)
+		# 		modl.error = err
+		# 		modl.exception = dat
+		# 		modl.errored = True
+		# 	else:
+		# 		modl.score = dat['score']
+		# 		modl.r2 = dat['r2']
+		# 		modl.evar = dat['evar']
+		# 		modl.aic = dat['aic']
+		# 		modl.bic = dat['bic']
+		# 		modl.chisqr = dat['chisqr']
+		# 		modl.redchi = dat['redchi']
+
+		# 		if peek:
+		# 			modl.peek_score  = modl.score
+		# 			modl.peek_r2     = modl.r2
+		# 			modl.peek_evar   = modl.evar
+		# 			modl.peek_aic    = modl.aic
+		# 			modl.peek_bic    = modl.bic
+		# 			modl.peek_chisqr = modl.chisqr
+		# 			modl.peek_redchi = modl.redchi
+
+		# 			modl.peek_nfev = dat['nfev']
+		# 			self.peek_nfev += modl.peek_nfev
+		# 			self.peekd_models += 1
+				
+		# 			modl.peeked = True
+
+		# 		else:
+		# 			modl.eval_nfev += dat['nfev']
+		# 			self.eval_nfev += modl.eval_nfev
+		# 			self.evald_models += 1
+	
+		# 			modl.evaluated = True
+				
+		# 		# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
+		# 		# print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+		# 		for v in dat['params']:
+		# 			if len(v[0]) == 1 and v[0] == 'C':
+		# 				print("GOT THE SINGULAR: ", v[0], dat['params'])
+		# 				continue
+		# 			# if v[0] in modl.params:
+		# 			modl.params[v[0]].value = v[1]
+
+		# 		if modl.parent_id >= 0:
+		# 			parent = self.models[modl.parent_id]
+		# 			# print("  ", parent.id, parent.expr )
+		# 			modl.improve_score = parent.score - modl.score
+		# 			modl.improve_r2 = modl.r2 - parent.r2
+		# 			modl.improve_evar = modl.evar - parent.evar
+		# 			modl.improve_aic = parent.aic - modl.aic
+		# 			modl.improve_bic = parent.bic - modl.bic
+		# 			modl.improve_redchi = parent.redchi - modl.redchi
+		# 		else:
+		# 			# should probaly normalized this across the initial population and permenately set
+		# 			modl.improve_score  = -0.000001 * modl.score
+		# 			modl.improve_r2     = -0.000001 * modl.r2
+		# 			modl.improve_evar   = -0.000001 * modl.evar
+		# 			modl.improve_aic    = -0.000001 * modl.aic
+		# 			modl.improve_bic    = -0.000001 * modl.bic
+		# 			modl.improve_redchi = -0.000001 * modl.redchi
+
+
+		# if progress:
+		# 	print("")

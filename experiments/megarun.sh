@@ -10,9 +10,9 @@ explicit_probs=(
 
 	# # "nguyen_01;out"
 	# "nguyen_02;out"
-	# "nguyen_03;out"
-	# "nguyen_04;out"
-	# "nguyen_05;out"
+	"nguyen_03;out"
+	"nguyen_04;out"
+	"nguyen_05;out"
 	"nguyen_06;out"
 	# # "nguyen_07;out"
 	# # "nguyen_08;out"
@@ -124,7 +124,7 @@ experiment_looper () {
 	experiment=$2
 	declare -a problems=("${!3}")
 
-	configs=`ls ${experiment} | grep "${systype}" | grep yml`
+	configs=`ls ${experiment} | grep "${systype}" | grep yml | grep T2`
 	for config in ${configs[@]}; do
 		echo "--------------------------------"
 		echo "    $experiment -- $config"

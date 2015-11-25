@@ -73,11 +73,11 @@ multi_expander_params:
 err_method: "rmse" 
 fitness_func_params: 
  - "normalize" 
- - "-(4)jpsz" 
+ - "-(3)jpsz" 
  - "-score" 
  - "+r2" 
- - "-bic" 
- - "-(2)psz" 
+ - "+bic"
+ - "-(1)psz" 
 
 
 

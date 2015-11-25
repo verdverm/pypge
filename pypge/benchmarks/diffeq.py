@@ -60,7 +60,7 @@ def gen(prob_params, **kwargs):
 
 def prep_params(prob_params, **kwargs):
 	prob_params['xs'] = sympy.symbols(prob_params['xs_str'])
-	prob_params['dxs_str'] = ["d"+x for x in prob_params['xs_str']]
+	prob_params['dxs_str'] = ["D_"+x for x in prob_params['xs_str']]
 	prob_params['dxs'] = sympy.symbols(prob_params['dxs_str'])
 	prob_params['noise_type'] = "percent"
 
