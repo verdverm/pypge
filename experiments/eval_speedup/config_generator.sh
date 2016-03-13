@@ -14,6 +14,6 @@ replacements=(
 
 for rep in ${replacements[@]}; do
 
-	sed -e "s/WORKERS/${!rep}/" config_sedlet.yml > config_explicit_${rep}.yml
+	sed -e "s/WORKERS/${rep}/" config_sedlet.yml > config_explicit_${rep}.yml
 
 done

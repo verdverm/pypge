@@ -1,0 +1,12 @@
+pytest
+pyyaml
+numpy
+pandas
+scipy
+scikit-learn
+networkx
+sympy
+lmfit
+deap
+matplotlib
+websocket-client

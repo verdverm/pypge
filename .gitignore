@@ -61,5 +61,17 @@ CHANGELOG.html
 
 venv/
 temp/
+output/
 
 .ipynb_checkpoints
+
+data/img
+data/benchmarks/lakes
+
+experiments/eval_speedup/*.yml
+experiments/expand_levels/*.yml
+experiments/fitness/*.yml
+
+
+
+

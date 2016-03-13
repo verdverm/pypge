@@ -1,29 +1,29 @@
 #!/bin/bash
 
 explicit_probs=(
-	# "koza_01;out"
-	# "koza_02;out"
-	# "koza_03;out"
+	"koza_01;out"
+	"koza_02;out"
+	"koza_03;out"
 	# # "lipson_01;out"
 	# # "lipson_02;out"
 	# # "lipson_03;out"
 
 	# # "nguyen_01;out"
 	# "nguyen_02;out"
-	"nguyen_03;out"
-	"nguyen_04;out"
-	"nguyen_05;out"
-	"nguyen_06;out"
+	# "nguyen_03;out"
+	# "nguyen_04;out"
+	# "nguyen_05;out"
+	# "nguyen_06;out"
 	# # "nguyen_07;out"
 	# # "nguyen_08;out"
-	"nguyen_09;out"
+	# "nguyen_09;out"
 	# # "nguyen_10;out"
 	# # "nguyen_11;out"
-	"nguyen_12;out"
+	# "nguyen_12;out"
 
 	# "korns_01;out"
 	# "korns_02;out"
-	"korns_03;out"
+	# "korns_03;out"
 	# "korns_04;out"
 	# # "korns_05;out"
 	# # "korns_06;out"
@@ -70,12 +70,12 @@ diffeq_probs=(
 
 experiments=(
 	# dev
-	# basic
+	basic
 
 	# eval_speedup
 
 	# fitness
-	expand_levels
+	# expand_levels
 	# expand_ops
 
 	# lotsa_vars
@@ -112,8 +112,8 @@ run_experiment() {
 
 	flags="--target ${target}"
 
-	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
-	python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
+	python3 main.py ${flags} ${cfgfile} ${inputfile} ${outputdir}
+	# python main.py ${flags} ${cfgfile} ${inputfile} ${outputdir} > ${outputdir}/pge_output.log
 
 
 }
@@ -124,7 +124,7 @@ experiment_looper () {
 	experiment=$2
 	declare -a problems=("${!3}")
 
-	configs=`ls ${experiment} | grep "${systype}" | grep yml | grep T2`
+	configs=`ls ${experiment} | grep "${systype}" | grep yml`
 	for config in ${configs[@]}; do
 		echo "--------------------------------"
 		echo "    $experiment -- $config"
@@ -152,13 +152,13 @@ for experiment in ${experiments[@]}; do
 	echo "================================"
 
 	experiment_looper "explicit" ${experiment} explicit_probs[@]
-
 done
+
 echo ""
 echo ""
 echo ""
 
-# echo "DEV ROADBLOCK BASH LINE ~150"
+# echo "DEV ROADBLOCK"
 # exit
 
 

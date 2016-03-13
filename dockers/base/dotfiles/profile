@@ -1,0 +1,10 @@
+alias egrep="egrep --color=auto --line-buffered"
+
+alias u="cd .. "
+alias x="exit "
+
+alias du1="du --max-depth=1 -h "
+alias du2="du --max-depth=2 -h "
+alias psg="ps aux | grep "
+
+alias hist="history | grep "

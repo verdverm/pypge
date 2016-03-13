@@ -2,12 +2,15 @@ name: "explicit_plain"
 
 workers: WORKERS
 queue_size: 4096
+remote_eval: true
+remote_host: "ws://192.168.1.5:8080/echo"
+# remote_host: "ws://localhost:8080/echo"
 
 max_iter: 12
 
 pop_count: 3
 peek_count: 12
-peek_npts: 100
+peek_npts: 0
 
 min_size: 1
 max_size: 64

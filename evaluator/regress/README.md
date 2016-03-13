@@ -1,9 +1,12 @@
  
 Install:
 
+```
 sudo apt-get install liblapack3 liblapack-dev libblas3 libblas-dev f2c
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLINSOLVERS_RETAIN_MEMORY=0 .
 make
+```
+
 
 int LEVMAR_DER(
   void (*func)(LM_REAL *p, LM_REAL *hx, int m, int n, void *adata),  * functional relation describing measurements. A p \in R^m yields a \hat{x} \in  R^n 

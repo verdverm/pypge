@@ -1,7 +1,7 @@
 package regress
 
 // #cgo CFLAGS: -ggdb -fPIC -m64 -pthread
-// #cgo LDFLAGS: /home/tony/gocode/src/github.com/verdverm/pypge/evaluator/regress/levmar-2.6/liblevmar.a -lf2c -llapack -lblas -lm
+// #cgo LDFLAGS: /gocode/src/github.com/verdverm/pypge/evaluator/regress/levmar-2.6/liblevmar.a -lf2c -llapack -lblas -lm
 // #include "levmar_h.h"
 // #include "stack.h"
 import "C"
