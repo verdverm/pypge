@@ -72,6 +72,7 @@ experiments/eval_speedup/*.yml
 experiments/expand_levels/*.yml
 experiments/fitness/*.yml
 
-
+dockers/data/data/
+dockers/eval/evaluator/
 
 

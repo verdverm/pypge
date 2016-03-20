@@ -1,13 +1,14 @@
 name: "explicit_trig"
 
-workers: 2
+workers: 3
 queue_size: 4096
 
-remote_eval: false
-remote_host: "ws://192.168.99.100:8080/echo"
+remote_eval: true
+remote_cores: 4
+remote_host: "ws://192.168.1.135:8080/echo"
 # remote_host: "ws://localhost:8080/echo"
 
-max_iter: 20
+max_iter: 50
 
 pop_count: 3
 peek_count: 12
@@ -44,6 +45,7 @@ multi_expander_params:
       shrinker: true
 
 err_method: "rmse"
+
 fitness_func_params:
  - "normalize"
  - "-sz"

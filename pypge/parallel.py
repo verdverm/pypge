@@ -129,3 +129,23 @@ def unwrap_self_alge_model_queue(PGE):
 		except Exception as e:
 			print("alge breaking!", e, "\n  ", pos, modl.expr)
 			break
+
+
+## EXPAND MULTIPROCESSING
+def unwrap_self_expd_model_queue(PGE):
+	while True:
+		try:
+			val = PGE.expd_in_queue.get()
+			if val is None:
+				print("Val None Breaking Expand Processor")
+				break;
+			pos = val[0]
+			modl = val[1]
+			grower = val[2]
+
+
+			expdd = grower.grow(modl)
+			PGE.expd_out_queue.put( (pos, None, expdd) )
+		except Exception as e:
+			print("expd breaking!", e, "\n  ", pos, modl.expr)
+			break

@@ -10,9 +10,9 @@ explicit_problems=[
 	"koza_01;out",
 	"koza_02;out",
 	"koza_03;out",
-	# "lipson_01;out",
-	# "lipson_02;out",
-	# "lipson_03;out",
+	"lipson_01;out",
+	"lipson_02;out",
+	"lipson_03;out",
 
 	# "nguyen_01;out",
 	# "nguyen_02;out",

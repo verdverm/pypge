@@ -72,6 +72,7 @@ class PGE:
 		}
 
 		self.remote_eval = True
+		self.remote_cores = 4
 		self.remote_host = "ws://localhost:8080/echo"
 
 		self.print_timing = False
@@ -159,13 +160,14 @@ class PGE:
 		self.hmap = {}
 
 		# legacy single expander heap and grower
+		self.max_heap_size = 50 * self.max_iter
 		self.nsga2_list = []
 		self.grower = expand.Grower(self.vars, self.usable_funcs, **self.grow_params)
 
 		# Progressive Evaluation heap
 		self.nsga2_peek = []
 
-		# Progressive Expansion heaps and growers
+		# Progressive Expansion growers
 		self.multi_expanders = []
 		pprint(self.multi_expander_params)
 		for i,p in enumerate(self.multi_expander_params):
@@ -201,6 +203,7 @@ class PGE:
 		self.peek_procs = []
 		self.eval_procs = []
 		self.alge_procs = []
+		self.expd_procs = []
 		
 		# multiprocessing stuff
 		if self.workers > 0:
@@ -216,13 +219,17 @@ class PGE:
 			self.alge_out_queue = mp.Queue(self.queue_size)
 			self.alge_procs = [mp.Process(target=parallel.unwrap_self_alge_model_queue, args=(self,) ) for i in range(self.workers)]
 
+			self.expd_in_queue = mp.Queue(self.queue_size)
+			self.expd_out_queue = mp.Queue(self.queue_size)
+			self.expd_procs = [mp.Process(target=parallel.unwrap_self_expd_model_queue, args=(self,) ) for i in range(self.workers)]
+
 
 		# possibly connect to remote host via websocket
 		if self.remote_eval == True:
 			self.ws = create_connection(self.remote_host)
 			data = {
 				'Kind': "WorkerCnt",
-				'Payload': self.workers
+				'Payload': self.remote_cores
 			}
 
 			msg = json.dumps(data)
@@ -363,6 +370,8 @@ class PGE:
 				proc.start()
 			for proc in self.alge_procs:
 				proc.start()
+			for proc in self.expd_procs:
+				proc.start()
 
 		L = None
 		if self.log_details:
@@ -496,20 +505,20 @@ class PGE:
 			prev = []
 			popd = []
 			expanded = []
-			for i,expndr in enumerate(self.multi_expanders):
+			for i,_ in enumerate(self.multi_expanders):
 				nsga2_list = self.multi_expanders[i]['nsga2_list']
 				pop_count = self.multi_expanders[i]['pop_count']
 				grower = self.multi_expanders[i]['grower']
 
 				if len(prev) > 0:
 					self.heap_push(nsga2_list, prev)
-				
+
 				fromlen = len(nsga2_list)
 				curr, nsga2_list = self.heap_pop(nsga2_list, pop_count, self.fitness_calc)
 				popd.extend(curr)
 				pfunc("heap " + str(i) + " popping", fromlen, numto=len(curr), lognames=["stdout","main"])
 
-				expand_tmp = self.grow_models(grower,curr)
+				expand_tmp = self.expand_models(curr, grower)
 				pfunc("popped => expanded", len(curr), numto=len(expand_tmp), lognames=["stdout","main"])
 				expanded.extend(expand_tmp)
 
@@ -719,12 +728,16 @@ class PGE:
 				self.eval_in_queue.put(None)
 			for proc in self.alge_procs:
 				self.alge_in_queue.put(None)
+			for proc in self.expd_procs:
+				self.expd_in_queue.put(None)
 
 			for proc in self.peek_procs:
 				proc.join()
 			for proc in self.eval_procs:
 				proc.join()
 			for proc in self.alge_procs:
+				proc.join()
+			for proc in self.expd_procs:
 				proc.join()
 
 		if self.remote_eval == True:
@@ -747,14 +760,6 @@ class PGE:
 		self.fitness_calc(final)
 		final_list = selection.sortLogNondominated(final, len(final))
 		return final_list
-
-	def grow_models(self, grower, models):
-		expanded = []
-		for p in models:
-			modls = grower.grow(p)
-			expanded.extend(modls)
-		return expanded
-
 
 	def filter_models(self, models):
 		passed = filters.filter_models(models, filters.default_filters)
@@ -814,6 +819,56 @@ class PGE:
 
 		unique = [m for m in models if m.memoized]
 		return unique
+
+	def expand_models(self, models, grower):
+		if self.workers > 0:
+			return self.expand_models_multiprocess(models, grower)
+		else:
+			# print ("  algebra:", len(models))
+			return self.grow_models(models, grower)
+
+	def grow_models(self, models, grower):
+		expanded = []
+		for p in models:
+			modls = grower.grow(p)
+			expanded.extend(modls)
+		return expanded
+
+
+	def expand_models_multiprocess(self, models, grower):
+		# print ("  multi algebra:", len(models))
+		expanded = []
+		
+		for i,m in enumerate(models):
+			try:
+				self.expd_in_queue.put( (i,m, grower) )
+			except Exception as e:
+				print ("expd send error!", e, "\n  ", i, m.expr)
+				break
+
+		
+		for i in range(len(models)):
+			try:
+				ret = self.expd_out_queue.get()
+			except Exception as e:
+				print ("expd recv error!", e, "\n  ", i)
+				break
+
+			pos = ret[0]
+			err = ret[1]
+			expd = ret[2]
+
+			print("Expanded: ", pos, len(expd))
+
+			if err is not None:
+				if err == "same":
+					continue
+				else:
+					print ("Error:", err)
+			else:
+				expanded.extend(expd)
+
+		return expanded
 
 	def algebra_models(self, models):
 		if self.workers > 0:
@@ -889,13 +944,15 @@ class PGE:
 
 	def peek_pop(self):
 		
+		popped, heap = self.heap_pop(self.nsga2_peek,self.peek_count,self.fitness_calc)
+
 		self.fitness_calc(self.nsga2_peek)
 
-		popped = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
 		for p in popped:
 			p.peek_popped = True
 
-		self.nsga2_peek = [m for m in self.nsga2_peek if not m.peek_popped]
+		self.nsga2_peek = heap
+		# self.nsga2_peek = [m for m in heap if not m.peek_popped]
 
 		return popped
 
@@ -913,9 +970,15 @@ class PGE:
 
 	def heap_pop(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		# popped = selection.selNSGA2(heap_list, pop_count)
+
 		popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+
 		heap_list = [m for m in heap_list if not m in popped]
+
+		if self.max_heap_size > 0 and len(heap_list) > self.max_heap_size:
+			heap_list = heap_list[:self.max_heap_size]
+
+
 		return popped, heap_list
 
 	def heap_select(self, heap_list, pop_count, fitness_calc):
