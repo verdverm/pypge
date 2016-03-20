@@ -1,4 +1,4 @@
-FROM pypge/base
+FROM verdverm/pypge-base
 
 RUN sudo apt-get update \
 	&& \
