@@ -47,6 +47,8 @@ class PGE:
 
 		self.max_power = 5
 
+		self.use_nsga2 = True
+
 		self.algebra_methods = ["expand", "factor"]
 
 		self.zero_epsilon = 1e-6  ## still need to use
@@ -971,7 +973,12 @@ class PGE:
 	def heap_pop(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
 
-		popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+		if self.use_nsga2:
+			popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+		else:
+			popped = selection.sortLogNondominated(heap_list, pop_count)
+			popped = [ p for plist in popped for p in plist]
+			# print("popped", popped)
 
 		heap_list = [m for m in heap_list if not m in popped]
 
@@ -983,8 +990,13 @@ class PGE:
 
 	def heap_select(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		# selected = selection.selNSGA2(heap_list, pop_count)
-		selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		if self.use_nsga2:
+			selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		else:
+			selected = selection.sortLogNondominated(heap_list, pop_count)
+			selected = [ s for slist in selected for s in slist]
+			# print("selected", selected)
+
 		return selected
 
 

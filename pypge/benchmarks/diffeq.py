@@ -22,7 +22,7 @@ def gen(prob_params, **kwargs):
 	eqns = []
 	for estr in prob_params['eqn_strs']:
 		e = sympy.sympify(estr)
-		print e
+		print(e)
 		# if we have extra substitutions, do that now
 		# (generally used for shared sub-expressions, for readability)
 		if 'eqn_subs' in prob_params:
@@ -432,7 +432,7 @@ def YeastMetabolism(**kwargs):
 			"n1",						#n1
 		},
 		'init_conds': {
-			"s1": 5.8,
+			"s1": 7.8,
 			"s2": 0.9,
 			"s3": 0.2,
 			"s4": 0.2,

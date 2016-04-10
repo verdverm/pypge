@@ -68,9 +68,11 @@ output/
 data/img
 data/benchmarks/lakes
 
-experiments/eval_speedup/*.yml
-experiments/expand_levels/*.yml
-experiments/fitness/*.yml
+experiments/04_fitness_metrics/*exp*
+experiments/04_fitness_metrics/*diffeq*
+experiments/06_progressive_expansion/*exp*
+experiments/06_progressive_expansion/*diffeq*
+experiments/08_speedup/*.yml
 
 dockers/data/data/
 dockers/eval/evaluator/

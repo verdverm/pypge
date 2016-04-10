@@ -67,6 +67,7 @@ class Grower:
 		self.add_xtop = False
 		self.shrinker = False
 		self.limiting_depth = 4
+		self.grow_filter = False
 
 		# do grow_level this way so we can override the individual ones if we want
 		self.grow_level = kwargs.get("grow_level", "low")   # [low,med,high]
@@ -333,7 +334,11 @@ class Grower:
 					ee = self._var_sub(e, lim_sub, depth=depth+1)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
+						print(len(expr.args))
+						args_map = set(expr.args)
 						for vs in ee:
+							if self.grow_filter == True and expr.is_Add and vs in args_map:
+								continue
 							# clone current args
 							cloned_args = list(expr.args)
 							# replace this term in each
@@ -357,6 +362,8 @@ class Grower:
 
 					# loop over sub_terms, subing for and create new arg sets
 					for vs in sub_terms:
+						# if self.grow_filter == True and expr.is_Add and vs in expr.args:
+						# 	continue
 						# clone current args
 						cloned_args = list(expr.args)
 						# replace this term in each
@@ -397,7 +404,11 @@ class Grower:
 						new_terms.append(new_mul)
 
 			new_exprs = []
+			print(len(expr.args))
+			args_map = set(expr.args)
 			for term in new_terms:
+				if self.grow_filter == True and term in args_map:
+					continue
 				cloned_args = list(expr.args)
 				cloned_args.append(term)
 				bigger_add = expr.func(*cloned_args)
@@ -435,7 +446,11 @@ class Grower:
 				ee = self._shrinker(e)
 				if len(ee) > 0:
 					# We made a removal(s) on an addition down this branch!!
+					print(len(expr.args))
+					args_map = set(expr.args)
 					for vs in ee:
+						if self.grow_filter == True and expr.is_Add and vs in args_map:
+							continue
 						# clone current args
 						cloned_args = list(expr.args)
 						# replace this term in each
@@ -468,15 +483,12 @@ class Grower:
 				sub_terms = self.add_extend_terms
 				if limit_sub:
 					sub_terms = self.add_extend_lim_terms
+				print(len(expr.args))
+				args_map = set(expr.args)
 				for term in sub_terms:
 					# has_match skips extending an add with a term that is already present 
-					has_match = False
-					for e in expr.args:
-						if e == term:
-							has_match = True
-							break
-					if has_match:
-						continue
+					if self.grow_filter == True and term in args_map:
+							continue
 					
 					cloned_args = list(expr.args)
 					cloned_args.append(term)
@@ -489,7 +501,11 @@ class Grower:
 					ee = self._add_extend(e,limit_sub=lim_sub)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
+						print(len(expr.args))
+						args_map = set(expr.args)
 						for vs in ee:
+							if self.grow_filter == True and expr.is_Add and vs in args_map:
+								continue
 							# clone current args
 							cloned_args = list(expr.args)
 							# replace this term in each
@@ -532,7 +548,11 @@ class Grower:
 					ee = self._mul_extend(e,limit_sub=lim_sub)
 					if len(ee) > 0:
 						# We made a substitution(s) on a variable down this branch!!
+						print(len(expr.args))
+						args_map = set(expr.args)
 						for vs in ee:
+							if self.grow_filter == True and expr.is_Add and vs in args_map:
+								continue
 							# clone current args
 							cloned_args = list(expr.args)
 							# replace this term in each

@@ -1,0 +1,58 @@
+name: "explicit_final"
+
+workers: 1
+queue_size: 4096
+remote_eval: true
+remote_cores: 4
+remote_host: "ws://192.168.1.135:8080/echo"
+
+max_iter: 10
+
+pop_count: 3
+peek_count: 12
+peek_npts: 0
+
+min_size: 1
+max_size: 64
+min_depth: 1
+max_depth: 6
+
+max_power: 6
+zero_epsilon: 0.000001
+
+excluded_cols: []
+
+usable_funcs: []
+ 
+algebra_methods: []
+
+multi_expander_params:
+  - name: "level_1"
+    pop_count: 3
+    usable_funcs: 
+     - "sin" 
+     - "cos"
+    grow_params:
+      func_level: "linear"
+      init_level: "med"
+      grow_level: "med"
+      subs_level: "med"
+      shrinker: true
+      add_xtop: true
+      grow_filter: true
+      limiting_depth: 4
+
+
+err_method: "rmse"
+
+fitness_func_params:
+ - "normalize" 
+ - "-(1)jpsz" 
+ - "-score" 
+ - "+bic"
+ - "-(1)psz" 
+
+
+print_timing: true
+log_details: true
+

@@ -1,7 +1,6 @@
 from pypge.benchmarks import explicit
 
 import numpy as np
-import json
 
 # visualization libraries
 import matplotlib.pyplot as plt

@@ -1,0 +1,9 @@
+problems=(
+    "yeast;D_S1"
+    "yeast;D_S2"
+    "yeast;D_S3"
+    "yeast;D_S4"
+    "yeast;D_N2"
+    "yeast;D_A3"
+    "yeast;D_S5"
+)

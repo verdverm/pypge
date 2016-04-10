@@ -3,7 +3,7 @@
 # eval $(docker-machine env default)
 
 
-docker run --rm -it --name pycode \
+docker run --rm -it --name yeast \
 	-v `pwd`:/pycode \
-	pypge/python3 \
+	verdverm/pypge \
 	/bin/bash

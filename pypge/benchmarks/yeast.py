@@ -22,7 +22,7 @@ with open("yeast2000.txt") as the_file:
 			vv = [item for sublist in var for item in sublist]
 			vvs.append(vv)
 			var = []
-			print "flattening", lol[0][idx], idx, len(vv), lcnt
+			print("flattening", lol[0][idx], idx, len(vv), lcnt)
 			if len(vvs) == 8:
 				break
 			idx += 1

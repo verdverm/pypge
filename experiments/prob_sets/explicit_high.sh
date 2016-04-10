@@ -1,0 +1,17 @@
+problems=(
+    "korns_01;out"
+    "korns_02;out"
+    "korns_03;out"
+    "korns_04;out"
+    "korns_05;out"
+    "korns_06;out"
+    "korns_07;out"
+    "korns_08;out"
+    "korns_09;out"
+    "korns_10;out"
+    "korns_11;out"
+    "korns_12;out"
+    "korns_13;out"
+    "korns_14;out"
+    "korns_15;out"
+)
