@@ -1,16 +1,11 @@
-pytest
-pyyaml
-
-scipy
 numpy
 pandas
+
+pypandoc
 
 scikit-learn
 networkx
 
 sympy
 lmfit
-deap
-
-matplotlib
 

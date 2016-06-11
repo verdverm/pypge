@@ -5,7 +5,7 @@
 from __future__ import print_function
 
 import numpy as np
-from deap import base, creator
+from pypge import base, creator
 
 
 def build_fitness_calc(params):

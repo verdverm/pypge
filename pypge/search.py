@@ -47,6 +47,8 @@ class PGE:
 
 		self.max_power = 5
 
+		self.use_nsga2 = True
+
 		self.algebra_methods = ["expand", "factor"]
 
 		self.zero_epsilon = 1e-6  ## still need to use
@@ -72,6 +74,7 @@ class PGE:
 		}
 
 		self.remote_eval = True
+		self.remote_cores = 4
 		self.remote_host = "ws://localhost:8080/echo"
 
 		self.print_timing = False
@@ -159,13 +162,14 @@ class PGE:
 		self.hmap = {}
 
 		# legacy single expander heap and grower
+		self.max_heap_size = 50 * self.max_iter
 		self.nsga2_list = []
 		self.grower = expand.Grower(self.vars, self.usable_funcs, **self.grow_params)
 
 		# Progressive Evaluation heap
 		self.nsga2_peek = []
 
-		# Progressive Expansion heaps and growers
+		# Progressive Expansion growers
 		self.multi_expanders = []
 		pprint(self.multi_expander_params)
 		for i,p in enumerate(self.multi_expander_params):
@@ -201,9 +205,10 @@ class PGE:
 		self.peek_procs = []
 		self.eval_procs = []
 		self.alge_procs = []
+		self.expd_procs = []
 		
 		# multiprocessing stuff
-		if self.workers > 1:
+		if self.workers > 0:
 			self.peek_in_queue = mp.Queue(self.queue_size)
 			self.peek_out_queue = mp.Queue(self.queue_size)
 			self.peek_procs = [mp.Process(target=parallel.unwrap_self_peek_model_queue, args=(self,) ) for i in range(self.workers)]
@@ -216,10 +221,27 @@ class PGE:
 			self.alge_out_queue = mp.Queue(self.queue_size)
 			self.alge_procs = [mp.Process(target=parallel.unwrap_self_alge_model_queue, args=(self,) ) for i in range(self.workers)]
 
+			self.expd_in_queue = mp.Queue(self.queue_size)
+			self.expd_out_queue = mp.Queue(self.queue_size)
+			self.expd_procs = [mp.Process(target=parallel.unwrap_self_expd_model_queue, args=(self,) ) for i in range(self.workers)]
+
 
 		# possibly connect to remote host via websocket
 		if self.remote_eval == True:
 			self.ws = create_connection(self.remote_host)
+			data = {
+				'Kind': "WorkerCnt",
+				'Payload': self.remote_cores
+			}
+
+			msg = json.dumps(data)
+
+			print("sending WorkerCnt: ")
+			self.ws.send(msg)
+			ok = self.ws.recv()
+			print("WorkerCnt ret: ", ok)
+
+
 
 
 	# END OF __init__
@@ -343,12 +365,14 @@ class PGE:
 		# preloop setup (generates,evals,queues first models)
 		print ("Preloop setup")
 
-		if self.workers > 1:
+		if self.workers > 0:
 			for proc in self.peek_procs:
 				proc.start()
 			for proc in self.eval_procs:
 				proc.start()
 			for proc in self.alge_procs:
+				proc.start()
+			for proc in self.expd_procs:
 				proc.start()
 
 		L = None
@@ -483,20 +507,20 @@ class PGE:
 			prev = []
 			popd = []
 			expanded = []
-			for i,expndr in enumerate(self.multi_expanders):
+			for i,_ in enumerate(self.multi_expanders):
 				nsga2_list = self.multi_expanders[i]['nsga2_list']
 				pop_count = self.multi_expanders[i]['pop_count']
 				grower = self.multi_expanders[i]['grower']
 
 				if len(prev) > 0:
 					self.heap_push(nsga2_list, prev)
-				
+
 				fromlen = len(nsga2_list)
 				curr, nsga2_list = self.heap_pop(nsga2_list, pop_count, self.fitness_calc)
 				popd.extend(curr)
 				pfunc("heap " + str(i) + " popping", fromlen, numto=len(curr), lognames=["stdout","main"])
 
-				expand_tmp = self.grow_models(grower,curr)
+				expand_tmp = self.expand_models(curr, grower)
 				pfunc("popped => expanded", len(curr), numto=len(expand_tmp), lognames=["stdout","main"])
 				expanded.extend(expand_tmp)
 
@@ -698,7 +722,7 @@ class PGE:
 		# 	self.GRAPH.remove_node(n)
 
 
-		if self.workers > 1:
+		if self.workers > 0:
 			print ("\n\nstopping workers")
 			for proc in self.peek_procs:
 				self.peek_in_queue.put(None)
@@ -706,12 +730,16 @@ class PGE:
 				self.eval_in_queue.put(None)
 			for proc in self.alge_procs:
 				self.alge_in_queue.put(None)
+			for proc in self.expd_procs:
+				self.expd_in_queue.put(None)
 
 			for proc in self.peek_procs:
 				proc.join()
 			for proc in self.eval_procs:
 				proc.join()
 			for proc in self.alge_procs:
+				proc.join()
+			for proc in self.expd_procs:
 				proc.join()
 
 		if self.remote_eval == True:
@@ -734,29 +762,6 @@ class PGE:
 		self.fitness_calc(final)
 		final_list = selection.sortLogNondominated(final, len(final))
 		return final_list
-
-	def grow_models(self, grower, models):
-		expanded = []
-		for p in models:
-			modls = self.grower.grow(p)
-			p.expanded = True
-
-			expanded.extend(modls)
-		return expanded
-
-
-	def expand_models(self, models):
-		expanded = []
-		for p in models:
-			modls = self.grower.grow(p)
-			p.expanded = True
-
-			expanded.extend(modls)
-			
-			self.final.append(p)
-			p.finalized = True
-
-		return expanded
 
 	def filter_models(self, models):
 		passed = filters.filter_models(models, filters.default_filters)
@@ -817,8 +822,58 @@ class PGE:
 		unique = [m for m in models if m.memoized]
 		return unique
 
+	def expand_models(self, models, grower):
+		if self.workers > 0:
+			return self.expand_models_multiprocess(models, grower)
+		else:
+			# print ("  algebra:", len(models))
+			return self.grow_models(models, grower)
+
+	def grow_models(self, models, grower):
+		expanded = []
+		for p in models:
+			modls = grower.grow(p)
+			expanded.extend(modls)
+		return expanded
+
+
+	def expand_models_multiprocess(self, models, grower):
+		# print ("  multi algebra:", len(models))
+		expanded = []
+		
+		for i,m in enumerate(models):
+			try:
+				self.expd_in_queue.put( (i,m, grower) )
+			except Exception as e:
+				print ("expd send error!", e, "\n  ", i, m.expr)
+				break
+
+		
+		for i in range(len(models)):
+			try:
+				ret = self.expd_out_queue.get()
+			except Exception as e:
+				print ("expd recv error!", e, "\n  ", i)
+				break
+
+			pos = ret[0]
+			err = ret[1]
+			expd = ret[2]
+
+			print("Expanded: ", pos, len(expd))
+
+			if err is not None:
+				if err == "same":
+					continue
+				else:
+					print ("Error:", err)
+			else:
+				expanded.extend(expd)
+
+		return expanded
+
 	def algebra_models(self, models):
-		if self.workers > 1:
+		if self.workers > 0:
 			return self.algebra_models_multiprocess(models)
 		else:
 			# print ("  algebra:", len(models))
@@ -891,13 +946,15 @@ class PGE:
 
 	def peek_pop(self):
 		
+		popped, heap = self.heap_pop(self.nsga2_peek,self.peek_count,self.fitness_calc)
+
 		self.fitness_calc(self.nsga2_peek)
 
-		popped = selection.selNSGA2(self.nsga2_peek, self.peek_count, nd='log')
 		for p in popped:
 			p.peek_popped = True
 
-		self.nsga2_peek = [m for m in self.nsga2_peek if not m.peek_popped]
+		self.nsga2_peek = heap
+		# self.nsga2_peek = [m for m in heap if not m.peek_popped]
 
 		return popped
 
@@ -915,15 +972,31 @@ class PGE:
 
 	def heap_pop(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		popped = selection.selNSGA2(heap_list, pop_count)
-		# popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+
+		if self.use_nsga2:
+			popped = selection.selNSGA2(heap_list, pop_count, nd='log')
+		else:
+			popped = selection.sortLogNondominated(heap_list, pop_count, True)
+			popped = [ p for plist in popped for p in plist]
+			# print("popped", popped)
+
 		heap_list = [m for m in heap_list if not m in popped]
+
+		if self.max_heap_size > 0 and len(heap_list) > self.max_heap_size:
+			heap_list = heap_list[:self.max_heap_size]
+
+
 		return popped, heap_list
 
 	def heap_select(self, heap_list, pop_count, fitness_calc):
 		fitness_calc(heap_list)
-		selected = selection.selNSGA2(heap_list, pop_count)
-		# selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		if self.use_nsga2:
+			selected = selection.selNSGA2(heap_list, pop_count, nd='log')
+		else:
+			selected = selection.sortLogNondominated(heap_list, pop_count, True)
+			selected = [ s for slist in selected for s in slist]
+			# print("selected", selected)
+
 		return selected
 
 
@@ -937,7 +1010,7 @@ class PGE:
 
 	def eval_models_local(self, models, peek=False, progress=False):
 
-		if self.workers > 1:
+		if self.workers > 0:
 			self.eval_models_multiprocess(models, peek, progress)
 
 		else:
@@ -1166,13 +1239,11 @@ class PGE:
 				dat = json.loads(ret)["Payload"]
 			except Exception as e:
 				MISSED += 1
-				# print ("DECODE ERROR: ", e, ret)
+				print ("DECODE ERROR: ", e, ret)
 				continue
 
 
 			pos = dat['Pos']
-			# err = dat[1]
-			# dat = dat[2]
 
 			try:
 				modl = models[pos]
@@ -1192,103 +1263,167 @@ class PGE:
 				modl.eval_nfev += dat['Nfev']
 				modl.eval_nfev += dat['Njac']
 
-			pkg = (pos,modl)
+			# modl.score = dat['Score']
+			modl.mae = dat['Mae']
+			modl.mse = dat['Mse']
+			modl.rmae = dat['Rmae']
+			modl.rmse = dat['Rmse']
+			modl.r2 = dat['R2']
+			modl.adj_r2 = dat['Adj_r2']
+			modl.evar = dat['Evar']
+			modl.aic = dat['Aic']
+			modl.bic = dat['Bic']
+			modl.chisqr = dat['Chisqr']
+			modl.redchi = dat['Redchi']
+
+			modl.score = getattr(modl,self.err_method)
+
+
 			if peek:
-				self.peek_in_queue.put( pkg )
+				modl.peek_score  = modl.score
+				modl.peek_r2     = modl.r2
+				modl.peek_evar   = modl.evar
+				modl.peek_aic    = modl.aic
+				modl.peek_bic    = modl.bic
+				modl.peek_chisqr = modl.chisqr
+				modl.peek_redchi = modl.redchi
+
+				self.peek_nfev += modl.peek_nfev
+				self.peekd_models += 1
+			
+				modl.peeked = True
+
 			else:
-				self.eval_in_queue.put( pkg )
+				self.eval_nfev += modl.eval_nfev
+				self.evald_models += 1
+
+				modl.evaluated = True
 
 
 
-		# get the models back from local evaluation and finish up scoring stuff
-		PPP2 = ppp
-		for i in range(L-MISSED):
-			if progress and i >= PPP2:
-				print('|',end="",flush=True)
-				PPP2 += ppp
-
-			ret = None
-			if peek:
-				ret = self.peek_out_queue.get()
+			if modl.parent_id >= 0:
+				parent = self.models[modl.parent_id]
+				# print("  ", parent.id, parent.expr )
+				modl.improve_score = parent.score - modl.score
+				modl.improve_r2 = modl.r2 - parent.r2
+				modl.improve_evar = modl.evar - parent.evar
+				modl.improve_aic = parent.aic - modl.aic
+				modl.improve_bic = parent.bic - modl.bic
+				modl.improve_redchi = parent.redchi - modl.redchi
 			else:
-				ret = self.eval_out_queue.get()
-			pos = ret[0]
-			err = ret[1]
-			dat = ret[2]
-
-			# print("ERR: ", err)
-
-			# print("DAT: ", pos, dat)
-			try:
-				modl = models[pos]
-			except Exception as e:
-				print ("POS ERROR: ", pos, len(models), e, ret)
-				continue
-
-			if err is not None:
-				# print("ERROR IS NOT NONE", err)
-				modl.error = err
-				modl.exception = dat
-				modl.errored = True
-			else:
-				modl.score = dat['score']
-				modl.r2 = dat['r2']
-				modl.evar = dat['evar']
-				modl.aic = dat['aic']
-				modl.bic = dat['bic']
-				modl.chisqr = dat['chisqr']
-				modl.redchi = dat['redchi']
-
-				if peek:
-					modl.peek_score  = modl.score
-					modl.peek_r2     = modl.r2
-					modl.peek_evar   = modl.evar
-					modl.peek_aic    = modl.aic
-					modl.peek_bic    = modl.bic
-					modl.peek_chisqr = modl.chisqr
-					modl.peek_redchi = modl.redchi
-
-					modl.peek_nfev = dat['nfev']
-					self.peek_nfev += modl.peek_nfev
-					self.peekd_models += 1
-				
-					modl.peeked = True
-
-				else:
-					modl.eval_nfev += dat['nfev']
-					self.eval_nfev += modl.eval_nfev
-					self.evald_models += 1
-	
-					modl.evaluated = True
-				
-				# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
-				# print(info, modl.expr, modl.jac, file=self.logs["evals"])
-
-				for v in dat['params']:
-					if len(v[0]) == 1 and v[0] == 'C':
-						print("GOT THE SINGULAR: ", v[0], dat['params'])
-						continue
-					# if v[0] in modl.params:
-					modl.params[v[0]].value = v[1]
-
-				if modl.parent_id >= 0:
-					parent = self.models[modl.parent_id]
-					# print("  ", parent.id, parent.expr )
-					modl.improve_score = parent.score - modl.score
-					modl.improve_r2 = modl.r2 - parent.r2
-					modl.improve_evar = modl.evar - parent.evar
-					modl.improve_aic = parent.aic - modl.aic
-					modl.improve_bic = parent.bic - modl.bic
-					modl.improve_redchi = parent.redchi - modl.redchi
-				else:
-					# should probaly normalized this across the initial population and permenately set
-					modl.improve_score  = -0.000001 * modl.score
-					modl.improve_r2     = -0.000001 * modl.r2
-					modl.improve_evar   = -0.000001 * modl.evar
-					modl.improve_aic    = -0.000001 * modl.aic
-					modl.improve_bic    = -0.000001 * modl.bic
-					modl.improve_redchi = -0.000001 * modl.redchi
+				# should probaly normalized this across the initial population and permenately set
+				modl.improve_score  = -0.000001 * modl.score
+				modl.improve_r2     = -0.000001 * modl.r2
+				modl.improve_evar   = -0.000001 * modl.evar
+				modl.improve_aic    = -0.000001 * modl.aic
+				modl.improve_bic    = -0.000001 * modl.bic
+				modl.improve_redchi = -0.000001 * modl.redchi
 
 
 		if progress:
 			print("")
+
+
+
+
+
+		# 	pkg = (pos,modl)
+		# 	if peek:
+		# 		self.peek_in_queue.put( pkg )
+		# 	else:
+		# 		self.eval_in_queue.put( pkg )
+
+
+
+		# # get the models back from local evaluation and finish up scoring stuff
+		# PPP2 = ppp
+		# for i in range(L-MISSED):
+		# 	if progress and i >= PPP2:
+		# 		print('|',end="",flush=True)
+		# 		PPP2 += ppp
+
+		# 	ret = None
+		# 	if peek:
+		# 		ret = self.peek_out_queue.get()
+		# 	else:
+		# 		ret = self.eval_out_queue.get()
+		# 	pos = ret[0]
+		# 	err = ret[1]
+		# 	dat = ret[2]
+
+		# 	# print("ERR: ", err)
+
+		# 	# print("DAT: ", pos, dat)
+		# 	try:
+		# 		modl = models[pos]
+		# 	except Exception as e:
+		# 		print ("POS ERROR: ", pos, len(models), e, ret)
+		# 		continue
+
+		# 	if err is not None:
+		# 		# print("ERROR IS NOT NONE", err)
+		# 		modl.error = err
+		# 		modl.exception = dat
+		# 		modl.errored = True
+		# 	else:
+		# 		modl.score = dat['score']
+		# 		modl.r2 = dat['r2']
+		# 		modl.evar = dat['evar']
+		# 		modl.aic = dat['aic']
+		# 		modl.bic = dat['bic']
+		# 		modl.chisqr = dat['chisqr']
+		# 		modl.redchi = dat['redchi']
+
+		# 		if peek:
+		# 			modl.peek_score  = modl.score
+		# 			modl.peek_r2     = modl.r2
+		# 			modl.peek_evar   = modl.evar
+		# 			modl.peek_aic    = modl.aic
+		# 			modl.peek_bic    = modl.bic
+		# 			modl.peek_chisqr = modl.chisqr
+		# 			modl.peek_redchi = modl.redchi
+
+		# 			modl.peek_nfev = dat['nfev']
+		# 			self.peek_nfev += modl.peek_nfev
+		# 			self.peekd_models += 1
+				
+		# 			modl.peeked = True
+
+		# 		else:
+		# 			modl.eval_nfev += dat['nfev']
+		# 			self.eval_nfev += modl.eval_nfev
+		# 			self.evald_models += 1
+	
+		# 			modl.evaluated = True
+				
+		# 		# info = "{:5d}  {:5d}  {:5d}     ".format(modl.id, modl.peek_nfev, modl.eval_nfev)
+		# 		# print(info, modl.expr, modl.jac, file=self.logs["evals"])
+
+		# 		for v in dat['params']:
+		# 			if len(v[0]) == 1 and v[0] == 'C':
+		# 				print("GOT THE SINGULAR: ", v[0], dat['params'])
+		# 				continue
+		# 			# if v[0] in modl.params:
+		# 			modl.params[v[0]].value = v[1]
+
+		# 		if modl.parent_id >= 0:
+		# 			parent = self.models[modl.parent_id]
+		# 			# print("  ", parent.id, parent.expr )
+		# 			modl.improve_score = parent.score - modl.score
+		# 			modl.improve_r2 = modl.r2 - parent.r2
+		# 			modl.improve_evar = modl.evar - parent.evar
+		# 			modl.improve_aic = parent.aic - modl.aic
+		# 			modl.improve_bic = parent.bic - modl.bic
+		# 			modl.improve_redchi = parent.redchi - modl.redchi
+		# 		else:
+		# 			# should probaly normalized this across the initial population and permenately set
+		# 			modl.improve_score  = -0.000001 * modl.score
+		# 			modl.improve_r2     = -0.000001 * modl.r2
+		# 			modl.improve_evar   = -0.000001 * modl.evar
+		# 			modl.improve_aic    = -0.000001 * modl.aic
+		# 			modl.improve_bic    = -0.000001 * modl.bic
+		# 			modl.improve_redchi = -0.000001 * modl.redchi
+
+
+		# if progress:
+		# 	print("")

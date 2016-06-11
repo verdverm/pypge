@@ -1,0 +1,21 @@
+problems=(
+    "koza_01;out"
+    # "koza_02;out"
+    # "koza_03;out"
+    # "lipson_01;out"
+    # "lipson_02;out"
+    # "lipson_03;out"
+
+    # "nguyen_01;out"
+    # "nguyen_02;out"
+    # "nguyen_03;out"
+    # "nguyen_04;out"
+    # "nguyen_05;out"
+    # "nguyen_06;out"
+    # "nguyen_07;out"
+    # "nguyen_08;out"
+    # "nguyen_09;out"
+    # "nguyen_10;out"
+    # "nguyen_11;out"
+    # "nguyen_12;out"
+)

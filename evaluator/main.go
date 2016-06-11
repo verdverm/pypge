@@ -5,6 +5,7 @@ import (
 	"flag"
 	// "fmt"
 	"log"
+	"math"
 	"net/http"
 	"runtime"
 
@@ -55,6 +56,11 @@ type Ret struct {
 	Payload interface{}
 }
 
+type WorkerMsg struct {
+	Kind    string
+	Payload int
+}
+
 type InputMsg struct {
 	Kind    string
 	Payload [][]float64
@@ -83,10 +89,23 @@ type EqnPayload struct {
 type EqnRet struct {
 	Pos   int       `json:pos`
 	Id    int       `json:id`
-	Score float64   `json:score`
 	Coeff []float64 `json:coeff`
 	Nfev  int       `json:nfev`
 	Njac  int       `json:njac`
+
+	Score  float64 `json:score`
+	Mae    float64 `json:mae`
+	Mse    float64 `json:me`
+	Rmae   float64 `json:rmae`
+	Rmse   float64 `json:rmse`
+	Vari   float64 `json:vari`
+	Evar   float64 `json:evar`
+	R2     float64 `json:r2`
+	Adj_r2 float64 `json:adj_r2`
+	Aic    float64 `json:aic`
+	Bic    float64 `json:bic`
+	Chisqr float64 `json:chisqr`
+	Redchi float64 `json:redchi`
 }
 
 func eval(w http.ResponseWriter, r *http.Request) {
@@ -101,10 +120,10 @@ func eval(w http.ResponseWriter, r *http.Request) {
 	go responder(c, outgoing)
 
 	eqnin := make(chan EqnMsg, 4096)
-	for i := 0; i < *cpus; i++ {
-		log.Print("Starting processor", i)
-		go eqnProcessor(eqnin, outgoing, i)
-	}
+	//for i := 0; i < *cpus; i++ {
+	//	log.Print("Starting processor", i)
+	//	go eqnProcessor(eqnin, outgoing, i)
+	//}
 
 	for {
 		mt, message, err := c.ReadMessage()
@@ -132,7 +151,7 @@ func responder(c *websocket.Conn, outgoing chan Ret) {
 		}
 
 		rmsg, err := json.Marshal(r)
-
+		// log.Println("SENDING: ", r)
 		err = c.WriteMessage(websocket.TextMessage, rmsg)
 		if err != nil {
 			log.Println("write:", err)
@@ -159,6 +178,24 @@ func handleMessage(msg Msg, orig []byte, outgoing chan Ret, eqnchan chan EqnMsg)
 	ret.Kind = msg.Kind
 
 	switch msg.Kind {
+	case "WorkerCnt":
+		var wmsg WorkerMsg
+		err := json.Unmarshal([]byte(orig), &wmsg)
+		if err != nil {
+			log.Printf("ERROR Unmarshal: ", err)
+			ret.Payload = err.Error()
+		} else {
+			count := wmsg.Payload
+			*cpus = count
+			last := runtime.GOMAXPROCS(count)
+			log.Println("Setting default CPUS to", count, "was", last)
+			ret.Payload = "OK"
+			for i := 0; i < *cpus; i++ {
+				log.Print("Starting processor", i)
+				go eqnProcessor(eqnchan, outgoing, i)
+			}
+		}
+
 	case "InputPeek":
 		var imsg InputMsg
 		err := json.Unmarshal([]byte(orig), &imsg)
@@ -242,6 +279,7 @@ func eqnProcessor(incoming chan EqnMsg, outgoing chan Ret, id int) {
 		ret.Payload = eret
 
 		log.Println(id, eret.Pos, eret.Id)
+		// log.Println(id, eret.Pos, eret.Id, eret)
 
 		outgoing <- ret
 	}
@@ -276,6 +314,21 @@ func handleEqnMessage(msg EqnPayload, kind string) EqnRet {
 	r.Coeff = coeff
 	r.Nfev = nfev
 	r.Njac = njac
+
+	mae, mse, rmae, rmse, vari, evar, r2, adj_r2, aic, bic, chisqr, redchi := scoreEqn(e, coeff, Input, Output)
+
+	r.Mae = mae
+	r.Mse = mse
+	r.Rmae = rmae
+	r.Rmse = rmse
+	r.Vari = vari
+	r.Evar = evar
+	r.R2 = r2
+	r.Adj_r2 = adj_r2
+	r.Aic = aic
+	r.Bic = bic
+	r.Chisqr = chisqr
+	r.Redchi = redchi
 
 	return r
 }
@@ -366,6 +419,80 @@ func fitEqn(e eqn.Eqn, jac []eqn.Eqn, Guess []float64, In [][]float64, Out []flo
 	njac := int(info[8])
 
 	return coeff, train_err, nfev, njac
+}
+
+func scoreEqn(e eqn.Eqn, Coeff []float64, In [][]float64, Out []float64) (float64, float64, float64, float64, float64, float64, float64, float64, float64, float64, float64, float64) {
+	L := len(Out)
+	fL := float64(L)
+	fC := float64(len(Coeff))
+	output := make([]float64, L)
+	// residuals := make([]float64, L)
+
+	sum_y := 0.0
+	sum_out := 0.0
+	for i, input := range In {
+		out := e.Eval(0, input, Coeff, nil)
+		output[i] = out
+		sum_out += out
+		sum_y += Out[i]
+	}
+	ave_out := sum_out / fL
+	ave_y := sum_y / fL
+
+	ss_var := 0.0
+	ss_var_2 := 0.0
+	ss_tot := 0.0
+	ss_reg := 0.0
+	ss_res := 0.0
+
+	mae := 0.0
+	mse := 0.0
+
+	for i, _ := range Out {
+		ss_var_i := output[i] - ave_out
+		ss_var += ss_var_i
+		ss_var_2 += ss_var_i * ss_var_i
+
+		ss_tot_i := Out[i] - ave_y
+		ss_tot += ss_tot_i * ss_tot_i
+
+		ss_reg_i := output[i] - ave_y
+		ss_reg += ss_reg_i * ss_reg_i
+
+		ss_res_i := output[i] - Out[i]
+		ss_res += ss_res_i * ss_res_i
+
+		mae += math.Abs(ss_res_i)
+		mse += ss_res
+	}
+	variance := ss_var_2 / (fL - 1.0)
+	r_squared := 1.0 - (ss_res / ss_tot)
+	explained_var := ss_reg / ss_tot
+	adj_r_squared := r_squared - (1.0-r_squared)*fC/(fL-fC-1.0)
+
+	// LL := math.Pow((1.0/math.Sqrt(2.0*math.Pi*variance)), fL) * math.Exp(-ss_var_2/(variance*2.0))
+	// log_like := math.Log(LL)
+	// log_like := n + n log 2π + n log(RSS/n)
+	log_like := fL + fL*math.Log(2.0*math.Pi) + fL*math.Log(ss_res/fL)
+
+	aic := 2.0*fC - 2.0*log_like
+	bic := fC*math.Log(fL) - 2.0*log_like
+
+	chi_squared := 0.0
+	for i, _ := range Out {
+		chi_i := (output[i] - ave_out) / variance
+		chi_squared += chi_i
+
+	}
+	reduced_chi_squared := chi_squared / (fL - fC - 1.0)
+
+	mae /= fL
+	mse /= fL
+	rmae := math.Sqrt(mae)
+	rmse := math.Sqrt(mse)
+
+	return mae, mse, rmae, rmse, variance, explained_var, r_squared, adj_r_squared, aic, bic, chi_squared, reduced_chi_squared
+
 }
 
 func main() {

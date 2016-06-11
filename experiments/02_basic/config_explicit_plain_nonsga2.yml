@@ -1,0 +1,58 @@
+name: "explicit_plain"
+
+workers: 1
+queue_size: 50000
+
+remote_eval: true
+remote_cores: 4
+remote_host: "ws://192.168.1.135:8080/echo"
+
+max_iter: 50
+
+pop_count: 3
+peek_count: 12
+peek_npts: 0
+
+min_size: 1
+max_size: 64
+min_depth: 1
+max_depth: 6
+
+max_power: 6
+zero_epsilon: 0.000001
+
+use_nsga2: false
+
+excluded_cols: []
+
+usable_funcs: []
+ 
+algebra_methods: []
+
+multi_expander_params:
+  - name: "first"
+    pop_count: 3
+    usable_funcs:
+      - "sin"
+      - "cos"
+    grow_params:
+      func_level: "linear"
+      init_level: "med"
+      grow_level: "low"
+      subs_level: "low"
+      add_extend_level: "low"
+      mul_extend_level: "low"
+      add_xtop: false
+      shrinker: false
+
+
+err_method: "rmse"
+
+fitness_func_params:
+ - "normalize"
+ - "-sz"
+ - "-score"
+
+print_timing: true
+log_details: true
+

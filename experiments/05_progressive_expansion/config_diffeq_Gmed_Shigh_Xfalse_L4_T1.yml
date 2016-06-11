@@ -1,0 +1,71 @@
+name: "config_diffeq_Gmed_Shigh_Xfalse_L4_T1"
+
+workers: 4
+queue_size: 4096
+
+remote_eval: true
+remote_cores: 4
+remote_host: "ws://172.17.0.1:8080/echo"
+
+max_iter: 20
+
+pop_count: 3
+peek_count: 12
+peek_npts: 0
+
+min_size: 1
+max_size: 64
+min_depth: 1
+max_depth: 6
+
+max_power: 6
+zero_epsilon: 0.000001
+
+excluded_cols:
+ - "T"
+ 
+algebra_methods: []
+
+
+multi_expander_params:
+  - name: "level_1"
+    pop_count: 3
+    usable_funcs: 
+     - "sin"
+     - "cos"
+    grow_params:
+      func_level: "linear"
+      init_level: "med"
+      grow_level: "med"
+      subs_level: "high"
+      shrinker: true
+      add_xtop: false
+      limiting_depth: 4
+#   - name: "level_2"
+#     pop_count: 1
+#     usable_funcs: 
+#      - "sin"
+#      - "cos"
+#     grow_params:
+# FUNC_LINEARITY_2
+#       init_level: "INIT_LEVEL_2"
+#       grow_level: "GROW_LEVEL_2"
+#       subs_level: "SUBS_LEVEL_2"
+#       shrinker: true
+#       add_xtop: USE_XTOP_2
+#       limiting_depth: LIM_DEPTH_2
+
+
+
+err_method: "rmse"
+
+fitness_func_params:
+ - "normalize" 
+ - "-(1)jpsz" 
+ - "-score" 
+ - "+bic"
+ - "-(1)psz" 
+
+print_timing: True
+log_details: True
+
