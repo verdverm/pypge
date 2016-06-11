@@ -36,7 +36,7 @@ experiment_looper () {
   shift 4
 
   declare -a problems=("${@}")
-  configs=`ls ${experiment} | grep "${systemtype}" | grep yml`
+  configs=`ls ${experiment} | grep "${systemtype}" | grep yml | grep nsga2`
 
   PLEN=0
   for config in ${problems[@]}; do

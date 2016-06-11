@@ -1,7 +1,7 @@
 name: "explicit_plain"
 
-workers: 2
-queue_size: 4096
+workers: 1
+queue_size: 50000
 
 remote_eval: true
 remote_cores: 4
@@ -32,7 +32,9 @@ algebra_methods: []
 multi_expander_params:
   - name: "first"
     pop_count: 3
-    usable_funcs: []
+    usable_funcs:
+      - "sin"
+      - "cos"
     grow_params:
       func_level: "linear"
       init_level: "med"

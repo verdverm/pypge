@@ -1,7 +1,7 @@
 # FROM alpine
 FROM verdverm/pypge
 
-RUN pip3 install jupyter
+# RUN pip3 install jupyter
 
 WORKDIR /pycode/experiments
 

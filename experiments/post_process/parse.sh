@@ -10,13 +10,13 @@ speedup=0
 final=0
 
 # baseline=1
-# basic=1
+basic=1
 # fitness_metrics=1
-enhanced_expansion=1
+# enhanced_expansion=1
 # progressive_expansion=1
 # progressive_evaluation=1
 # speedup=1
-# final=1
+final=1
 
 set -e
 
@@ -30,7 +30,7 @@ fi
 ### 02_basic ###
 if [ "$basic" -eq "1" ]; then
 	extract_last_lines_from_errs_log /dissertation_output/02_basic table.txt
-	python3 scripts/latex_table.py table.txt "problem"  "ave_size"  "ave_err"  "ave_r2"  "best_err"  "best_r2"
+	python3 scripts/latex_table.py table.txt "problem"  "best_r2" "evald_models"
 fi
 
 
@@ -87,7 +87,7 @@ fi
 ### 09_final ###
 if [ "$final" -eq "1" ]; then
 	extract_last_lines_from_errs_log /dissertation_output/09_final table.txt
-	python3 scripts/latex_table.py table.txt "problem"  "ave_size"  "ave_err"  "ave_r2"  "best_err"  "best_r2"
+	python3 scripts/latex_table.py table.txt "problem"  "best_r2"  "evald_models"
 fi
 
 

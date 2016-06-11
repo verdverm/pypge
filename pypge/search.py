@@ -976,7 +976,7 @@ class PGE:
 		if self.use_nsga2:
 			popped = selection.selNSGA2(heap_list, pop_count, nd='log')
 		else:
-			popped = selection.sortLogNondominated(heap_list, pop_count)
+			popped = selection.sortLogNondominated(heap_list, pop_count, True)
 			popped = [ p for plist in popped for p in plist]
 			# print("popped", popped)
 
@@ -993,7 +993,7 @@ class PGE:
 		if self.use_nsga2:
 			selected = selection.selNSGA2(heap_list, pop_count, nd='log')
 		else:
-			selected = selection.sortLogNondominated(heap_list, pop_count)
+			selected = selection.sortLogNondominated(heap_list, pop_count, True)
 			selected = [ s for slist in selected for s in slist]
 			# print("selected", selected)
 

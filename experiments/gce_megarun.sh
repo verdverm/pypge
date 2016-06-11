@@ -12,7 +12,7 @@
 
 # XXX ./gce_run.sh  -N  pypge-02-basic-explicit-low                           --    ./run.sh   -x   02_basic                     -P  -s "explicit"   -p "explicit_low.sh"
 # ./gce_run.sh  -N  pypge-02-basic-explicit-high                          --    ./run.sh   -x   02_basic                     $P  -s "explicit"   -p "explicit_high.sh"
-# XXX ./gce_run.sh  -N  pypge-02-basic-diffeq-all                             --    ./run.sh   -x   02_basic                     $P  -s "diffeq"     -p "diffeq_all.sh"
+./gce_run.sh  -N  pypge-02-basic-diffeq-all                             --    ./run.sh   -x   02_basic                     $P  -s "diffeq"     -p "diffeq_all.sh"
 
 # ./gce_run.sh  -N  pypge-03-fitness-normalizing-explicit-subset          --    ./run.sh   -x   03_fitness_normalizing       $P  -s "explicit"   -p "explicit_subset.sh"
 # ./gce_run.sh  -N  pypge-03-fitness-normalizing-diffeq-subset            --    ./run.sh   -x   03_fitness_normalizing       $P  -s "diffeq"     -p "diffeq_subset.sh"

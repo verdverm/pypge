@@ -5,5 +5,6 @@
 
 docker run --rm -it --name yeast \
 	-v `pwd`:/pycode \
-	verdverm/pypge \
+	-p 8888:8888 \
+	verdverm/pypge-experiments \
 	/bin/bash

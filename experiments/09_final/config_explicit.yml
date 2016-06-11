@@ -39,9 +39,9 @@ multi_expander_params:
       init_level: "med"
       grow_level: "med"
       subs_level: "med"
-      shrinker: true
+      shrinker: false
       add_xtop: true
-      grow_filter: true
+      grow_filter: false
       limiting_depth: 4
 
 
