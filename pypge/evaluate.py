@@ -130,19 +130,19 @@ def eval_model(modl, vars, X_train, Y_train, err_method, MAXFEV=100):
 
 	modl.score, err = Score(Y_train, y_pred, err_method)
 	if err is not None:
-		modl.error = "errored while scoring: " + modl.error
+		modl.error = "errored while scoring: " + err
 		modl.errored = True
 		return False
 	
 	modl.r2, err = Score(Y_train, y_pred, "r2")
 	if err is not None:
-		modl.error = "errored while r2'n: " + modl.error
+		modl.error = "errored while r2'n: " + err
 		modl.errored = True
 		return False
 	
 	modl.evar, err = Score(Y_train, y_pred, "evar")
 	if err is not None:
-		modl.error = "errored while evar'n: " + modl.error
+		modl.error = "errored while evar'n: " + err
 		modl.errored = True
 		return False
 
